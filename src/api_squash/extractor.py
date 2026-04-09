@@ -5,6 +5,8 @@ from pathlib import Path
 
 from .models import ClassSummary, FunctionSummary, ModuleSummary
 
+PRESERVED_DECORATORS = {"property", "classmethod", "staticmethod", "overload"}
+
 
 def extract_file(path: Path) -> ModuleSummary:
     source = path.read_text(encoding="utf-8")
@@ -49,13 +51,36 @@ def _extract_function(
     docstring = ast.get_docstring(node)
     signature = _build_signature(node)
     is_async = isinstance(node, ast.AsyncFunctionDef)
+    decorators = _extract_decorators(node)
 
     return FunctionSummary(
         name=node.name,
         signature=signature,
         docstring=docstring,
         is_async=is_async,
+        decorators=decorators,
     )
+
+
+def _extract_decorators(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[str]:
+    result: list[str] = []
+    for dec in node.decorator_list:
+        name = _decorator_name(dec)
+        if name in PRESERVED_DECORATORS:
+            result.append(name)
+    return result
+
+
+def _decorator_name(node: ast.expr) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Call):
+        return _decorator_name(node.func)
+    return None
 
 
 def _build_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:

@@ -185,3 +185,101 @@ def test_file_with_only_imports(tmp_path):
 
     assert result.functions == []
     assert result.classes == []
+
+
+def test_property_decorator(tmp_path):
+    source = (
+        "class Raster:\n"
+        "    @property\n"
+        "    def crs(self) -> str:\n"
+        "        return self._crs\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["property"]
+
+
+def test_classmethod_decorator(tmp_path):
+    source = (
+        "class Factory:\n"
+        "    @classmethod\n"
+        "    def create(cls) -> 'Factory':\n"
+        "        return cls()\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["classmethod"]
+
+
+def test_staticmethod_decorator(tmp_path):
+    source = (
+        "class Utils:\n"
+        "    @staticmethod\n"
+        "    def helper(x: int) -> int:\n"
+        "        return x + 1\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["staticmethod"]
+
+
+def test_overload_decorator(tmp_path):
+    source = (
+        "from typing import overload\n"
+        "class Parser:\n"
+        "    @overload\n"
+        "    def parse(self, data: str) -> dict: ...\n"
+        "    @overload\n"
+        "    def parse(self, data: bytes) -> dict: ...\n"
+        "    def parse(self, data):\n"
+        "        pass\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    methods = result.classes[0].methods
+    assert methods[0].decorators == ["overload"]
+    assert methods[1].decorators == ["overload"]
+    assert methods[2].decorators == []
+
+
+def test_unrecognised_decorator_ignored(tmp_path):
+    source = (
+        "import functools\n"
+        "class Cached:\n"
+        "    @functools.lru_cache\n"
+        "    def compute(self, x: int) -> int:\n"
+        "        return x * 2\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == []
+
+
+def test_multiple_decorators(tmp_path):
+    source = (
+        "from typing import overload\n"
+        "class Multi:\n"
+        "    @staticmethod\n"
+        "    @overload\n"
+        "    def do(x: int) -> int: ...\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["staticmethod", "overload"]
