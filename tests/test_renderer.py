@@ -636,3 +636,17 @@ def test_render_empty_module_with_constants():
     output = render_module(module)
     assert "# config.py" in output
     assert "DEFAULT_PORT: int = 8080" in output
+
+
+def test_render_multiple_constants_grouped():
+    """Multiple constants should be on consecutive lines without blank lines between them."""
+    module = ModuleSummary(
+        path="config.py",
+        constants=[
+            ConstantSummary(name="MAX_RETRIES", value="3"),
+            ConstantSummary(name="TIMEOUT", type_annotation="int", value="30"),
+            ConstantSummary(name="BUFFER_SIZE", value="1024"),
+        ],
+    )
+    output = render_module(module)
+    assert "MAX_RETRIES = 3\nTIMEOUT: int = 30\nBUFFER_SIZE = 1024" in output

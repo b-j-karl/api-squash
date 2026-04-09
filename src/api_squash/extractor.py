@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 import warnings
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from .models import ClassSummary, ConstantSummary, FunctionSummary, ModuleSummar
 
 PRESERVED_DECORATORS = {"property", "classmethod", "staticmethod", "overload"}
 
-_CONSTANT_NAME_RE = __import__("re").compile(r"^[A-Z][A-Z0-9_]*$")
+_CONSTANT_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
 def extract_file(path: Path) -> ModuleSummary:

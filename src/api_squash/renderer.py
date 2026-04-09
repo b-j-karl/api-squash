@@ -20,10 +20,13 @@ def render_module(
 
     items: list[str] = []
     if not no_constants:
+        const_lines: list[str] = []
         for const in module.constants:
             if no_private and _is_private(const.name):
                 continue
-            items.append(_render_constant(const))
+            const_lines.append(_render_constant(const))
+        if const_lines:
+            items.append("\n".join(const_lines))
     for cls in module.classes:
         if no_private and _is_private(cls.name) and cls.name not in keep_names:
             continue
