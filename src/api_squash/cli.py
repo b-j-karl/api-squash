@@ -34,7 +34,7 @@ def file(path: str, no_docstrings: bool, no_private: bool) -> None:
         click.echo(f"Error: Failed to parse {path}: {e}", err=True)
         sys.exit(1)
 
-    module.path = file_path.name
+    module.path = Path(path).as_posix()
 
     output = render_module(
         module, no_docstrings=no_docstrings, no_private=no_private
@@ -70,7 +70,9 @@ def project(
     modules = []
     for file_path in files:
         try:
-            modules.append(extract_file(file_path))
+            module = extract_file(file_path)
+            module.path = file_path.relative_to(root).as_posix()
+            modules.append(module)
         except SyntaxError as e:
             click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
         except Exception as e:

@@ -51,8 +51,8 @@ def test_file_command_no_private(tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli, ["file", str(p), "--no-private"])
     assert result.exit_code == 0
-    assert "public" in result.output
-    assert "_private" not in result.output
+    assert "def public" in result.output
+    assert "def _private" not in result.output
 
 
 def test_file_command_syntax_error(tmp_path):
