@@ -199,3 +199,100 @@ def test_render_empty_module():
     module = ModuleSummary(path="empty.py")
     output = render_module(module)
     assert output == "# empty.py\n"
+
+
+def test_render_property_method():
+    module = ModuleSummary(
+        path="example.py",
+        classes=[
+            ClassSummary(
+                name="Raster",
+                methods=[
+                    FunctionSummary(
+                        name="crs",
+                        signature="(self) -> CRS",
+                        decorators=["property"],
+                    ),
+                ],
+            ),
+        ],
+    )
+    output = render_module(module)
+    assert "  @property\n  def crs(self) -> CRS" in output
+
+
+def test_render_staticmethod():
+    module = ModuleSummary(
+        path="example.py",
+        classes=[
+            ClassSummary(
+                name="Utils",
+                methods=[
+                    FunctionSummary(
+                        name="helper",
+                        signature="(x: int) -> int",
+                        decorators=["staticmethod"],
+                    ),
+                ],
+            ),
+        ],
+    )
+    output = render_module(module)
+    assert "  @staticmethod\n  def helper(x: int) -> int" in output
+
+
+def test_render_overload():
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="parse",
+                signature="(data: str) -> dict",
+                decorators=["overload"],
+            ),
+            FunctionSummary(
+                name="parse",
+                signature="(data: bytes) -> dict",
+                decorators=["overload"],
+            ),
+        ],
+    )
+    output = render_module(module)
+    assert "@overload\ndef parse(data: str) -> dict" in output
+    assert "@overload\ndef parse(data: bytes) -> dict" in output
+
+
+def test_render_multiple_decorators():
+    module = ModuleSummary(
+        path="example.py",
+        classes=[
+            ClassSummary(
+                name="Multi",
+                methods=[
+                    FunctionSummary(
+                        name="do",
+                        signature="(x: int) -> int",
+                        decorators=["staticmethod", "overload"],
+                    ),
+                ],
+            ),
+        ],
+    )
+    output = render_module(module)
+    assert "  @staticmethod\n  @overload\n  def do(x: int) -> int" in output
+
+
+def test_render_function_no_decorators_unchanged():
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="greet",
+                signature="(name: str) -> str",
+                docstring="Say hello.",
+            ),
+        ],
+    )
+    output = render_module(module)
+    expected = "# example.py\n\ndef greet(name: str) -> str\n  Say hello.\n"
+    assert output == expected

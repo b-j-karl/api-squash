@@ -74,6 +74,9 @@ def _render_function(
     prefix = " " * indent
     parts: list[str] = []
 
+    for dec in func.decorators:
+        parts.append(f"{prefix}@{dec}")
+
     keyword = "async def" if func.is_async else "def"
     parts.append(f"{prefix}{keyword} {func.name}{func.signature}")
 
