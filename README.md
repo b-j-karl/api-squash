@@ -9,19 +9,19 @@
 
 ## Overview
 
-When working with LLMs, every token counts. Pasting entire source files into a
-prompt wastes context on implementation details that the model doesn't need.
+Agentic AI workflows need to understand a codebase's API surface without
+burning context on implementation details. Pasting entire source files into a
+prompt wastes tokens on function bodies, comments, and boilerplate that the
+agent doesn't need.
 
 **api-squash** parses Python source files using the AST and produces concise
 Markdown summaries containing only the public API surface — classes, functions,
-and their signatures — so you can feed a full project's interface into an LLM in
-a fraction of the tokens.
+and their signatures — so AI agents can ingest a full project's interface in a
+fraction of the tokens.
 
-**Who is it for?**
-
-- Developers using LLMs for code generation, review, or Q&A
-- Documentation authors who need a quick structural overview
-- Anyone who wants a bird's-eye view of a Python codebase
+Built for agentic AI workflows: code-generation agents, autonomous refactoring
+pipelines, and any system where an LLM needs to reason about code structure
+programmatically.
 
 ## Installation
 
