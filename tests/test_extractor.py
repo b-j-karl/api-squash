@@ -1,3 +1,5 @@
+import warnings
+
 from api_squash.extractor import extract_file
 
 
@@ -283,3 +285,20 @@ def test_multiple_decorators(tmp_path):
 
     method = result.classes[0].methods[0]
     assert method.decorators == ["staticmethod", "overload"]
+
+
+def test_invalid_escape_no_syntax_warning(tmp_path):
+    source = (
+        "import re\n"
+        "pattern = re.compile('\\p{L}')\n"
+    )
+    p = tmp_path / "bad_escape.py"
+    p.write_text(source, encoding="utf-8")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = extract_file(p)
+
+    syntax_warnings = [w for w in caught if issubclass(w.category, SyntaxWarning)]
+    assert syntax_warnings == [], f"SyntaxWarning(s) leaked: {syntax_warnings}"
+    assert result.functions == []

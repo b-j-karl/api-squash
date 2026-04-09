@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import warnings
 from pathlib import Path
 
 from .models import ClassSummary, FunctionSummary, ModuleSummary
@@ -10,7 +11,9 @@ PRESERVED_DECORATORS = {"property", "classmethod", "staticmethod", "overload"}
 
 def extract_file(path: Path) -> ModuleSummary:
     source = path.read_text(encoding="utf-8")
-    tree = ast.parse(source)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=SyntaxWarning)
+        tree = ast.parse(source)
 
     classes: list[ClassSummary] = []
     functions: list[FunctionSummary] = []
