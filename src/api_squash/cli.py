@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import click
+
+from .extractor import extract_file
+from .renderer import render_module, render_project
+from .scanner import scan_directory
+
+
+@click.group()
+def cli() -> None:
+    """Extract Python API surfaces in a compact, token-efficient format."""
+
+
+@cli.command()
+@click.argument("path", type=click.Path(exists=True))
+@click.option("--no-docstrings", is_flag=True, help="Strip all docstrings")
+@click.option(
+    "--no-private", is_flag=True, help="Skip private methods (except __init__)"
+)
+def file(path: str, no_docstrings: bool, no_private: bool) -> None:
+    """Summarize a single Python file."""
+    file_path = Path(path)
+    if file_path.suffix != ".py":
+        click.echo(f"Error: {path} is not a Python file", err=True)
+        sys.exit(1)
+
+    try:
+        module = extract_file(file_path)
+    except SyntaxError as e:
+        click.echo(f"Error: Failed to parse {path}: {e}", err=True)
+        sys.exit(1)
+
+    module.path = file_path.name
+
+    output = render_module(
+        module, no_docstrings=no_docstrings, no_private=no_private
+    )
+    click.echo(output, nl=False)
+
+
+@cli.command()
+@click.argument("path", type=click.Path(exists=True, file_okay=False))
+@click.option(
+    "--max-depth", type=int, default=None, help="Limit directory recursion depth"
+)
+@click.option("--exclude", multiple=True, help="Glob patterns to exclude")
+@click.option("--no-docstrings", is_flag=True, help="Strip all docstrings")
+@click.option(
+    "--no-private", is_flag=True, help="Skip private methods (except __init__)"
+)
+def project(
+    path: str,
+    max_depth: int | None,
+    exclude: tuple[str, ...],
+    no_docstrings: bool,
+    no_private: bool,
+) -> None:
+    """Summarize all Python files in a directory."""
+    root = Path(path)
+    files = scan_directory(root, exclude=list(exclude), max_depth=max_depth)
+
+    if not files:
+        click.echo(f"No Python files found in {path}", err=True)
+        return
+
+    modules = []
+    for file_path in files:
+        try:
+            modules.append(extract_file(file_path))
+        except SyntaxError as e:
+            click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
+        except Exception as e:
+            click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
+
+    output = render_project(
+        modules, no_docstrings=no_docstrings, no_private=no_private
+    )
+    click.echo(output, nl=False)
