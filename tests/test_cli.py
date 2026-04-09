@@ -111,3 +111,51 @@ def test_project_command_skips_bad_files(tmp_path):
     assert result.exit_code == 0
     assert "ok" in result.output
     assert "Warning" in result.output
+
+
+# --- Tests for --no-constants flag (#20) ---
+
+
+def test_file_command_includes_constants_by_default(tmp_path):
+    source = "MAX_RETRIES = 3\ndef func(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["file", str(p)])
+    assert result.exit_code == 0
+    assert "MAX_RETRIES = 3" in result.output
+    assert "def func()" in result.output
+
+
+def test_file_command_no_constants(tmp_path):
+    source = "MAX_RETRIES = 3\ndef func(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["file", str(p), "--no-constants"])
+    assert result.exit_code == 0
+    assert "MAX_RETRIES" not in result.output
+    assert "def func()" in result.output
+
+
+def test_project_command_includes_constants_by_default(tmp_path):
+    (tmp_path / "config.py").write_text("DEFAULT_PORT: int = 8080\n", encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["project", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "DEFAULT_PORT: int = 8080" in result.output
+
+
+def test_project_command_no_constants(tmp_path):
+    (tmp_path / "config.py").write_text(
+        "DEFAULT_PORT: int = 8080\ndef run(): pass\n", encoding="utf-8"
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["project", str(tmp_path), "--no-constants"])
+    assert result.exit_code == 0
+    assert "DEFAULT_PORT" not in result.output
+    assert "def run()" in result.output

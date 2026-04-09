@@ -2,6 +2,13 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class ConstantSummary:
+    name: str
+    type_annotation: str | None = None
+    value: str | None = None
+
+
+@dataclass
 class FunctionSummary:
     name: str
     signature: str
@@ -23,3 +30,4 @@ class ModuleSummary:
     path: str
     classes: list[ClassSummary] = field(default_factory=list)
     functions: list[FunctionSummary] = field(default_factory=list)
+    constants: list[ConstantSummary] = field(default_factory=list)
