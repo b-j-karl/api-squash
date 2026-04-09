@@ -20,5 +20,6 @@ packages = ["src/api_squash"]
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=7.1.0",
     "ruff>=0.4",
 ]
