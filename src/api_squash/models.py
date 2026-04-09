@@ -7,6 +7,7 @@ class FunctionSummary:
     signature: str
     docstring: str | None = None
     is_async: bool = False
+    decorators: list[str] = field(default_factory=list)
 
 
 @dataclass
