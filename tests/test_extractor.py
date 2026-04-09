@@ -288,10 +288,7 @@ def test_multiple_decorators(tmp_path):
 
 
 def test_invalid_escape_no_syntax_warning(tmp_path):
-    source = (
-        "import re\n"
-        "pattern = re.compile('\\p{L}')\n"
-    )
+    source = "import re\npattern = re.compile('\\p{L}')\n"
     p = tmp_path / "bad_escape.py"
     p.write_text(source, encoding="utf-8")
 
