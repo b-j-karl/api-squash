@@ -16,7 +16,7 @@ jobs:
       - run: uv python install 3.13
       - run: uv build
       - name: Smoke test (wheel)
-        run: uv run --isolated --no-project --with dist/*.whl -c "from api_squash.cli import cli; print('ok')"
+        run: uv run --isolated --no-project --with dist/*.whl -- python -c "from api_squash.cli import cli; print('ok')"
       - name: Smoke test (sdist)
-        run: uv run --isolated --no-project --with dist/*.tar.gz -c "from api_squash.cli import cli; print('ok')"
+        run: uv run --isolated --no-project --with dist/*.tar.gz -- python -c "from api_squash.cli import cli; print('ok')"
       - run: uv publish
