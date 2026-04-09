@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from .models import ClassSummary, FunctionSummary, ModuleSummary
+from .models import ClassSummary, ConstantSummary, FunctionSummary, ModuleSummary
 
 
 def render_module(
@@ -10,6 +10,7 @@ def render_module(
     *,
     no_docstrings: bool = False,
     no_private: bool = False,
+    no_constants: bool = False,
 ) -> str:
     lines = [f"# {module.path}"]
 
@@ -18,6 +19,14 @@ def render_module(
         keep_names = _collect_referenced_private_names(module)
 
     items: list[str] = []
+    if not no_constants:
+        const_lines: list[str] = []
+        for const in module.constants:
+            if no_private and _is_private(const.name):
+                continue
+            const_lines.append(_render_constant(const))
+        if const_lines:
+            items.append("\n".join(const_lines))
     for cls in module.classes:
         if no_private and _is_private(cls.name) and cls.name not in keep_names:
             continue
@@ -41,12 +50,27 @@ def render_project(
     *,
     no_docstrings: bool = False,
     no_private: bool = False,
+    no_constants: bool = False,
 ) -> str:
     rendered = [
-        render_module(module, no_docstrings=no_docstrings, no_private=no_private)
+        render_module(
+            module,
+            no_docstrings=no_docstrings,
+            no_private=no_private,
+            no_constants=no_constants,
+        )
         for module in modules
     ]
     return "\n---\n\n".join(rendered)
+
+
+def _render_constant(const: ConstantSummary) -> str:
+    parts = [const.name]
+    if const.type_annotation:
+        parts.append(f": {const.type_annotation}")
+    if const.value is not None:
+        parts.append(f" = {const.value}")
+    return "".join(parts)
 
 
 def _render_class(

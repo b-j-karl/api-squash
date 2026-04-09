@@ -23,7 +23,12 @@ def cli() -> None:
     is_flag=True,
     help="Skip private classes/methods (except __init__); keeps items referenced by public signatures",
 )
-def file(path: str, no_docstrings: bool, no_private: bool) -> None:
+@click.option(
+    "--no-constants",
+    is_flag=True,
+    help="Exclude module-level UPPER_CASE constants from output",
+)
+def file(path: str, no_docstrings: bool, no_private: bool, no_constants: bool) -> None:
     """Summarize a single Python file."""
     file_path = Path(path)
     if file_path.suffix != ".py":
@@ -38,7 +43,12 @@ def file(path: str, no_docstrings: bool, no_private: bool) -> None:
 
     module.path = Path(path).as_posix()
 
-    output = render_module(module, no_docstrings=no_docstrings, no_private=no_private)
+    output = render_module(
+        module,
+        no_docstrings=no_docstrings,
+        no_private=no_private,
+        no_constants=no_constants,
+    )
     click.echo(output, nl=False)
 
 
@@ -54,12 +64,18 @@ def file(path: str, no_docstrings: bool, no_private: bool) -> None:
     is_flag=True,
     help="Skip private classes/methods (except __init__); keeps items referenced by public signatures",
 )
+@click.option(
+    "--no-constants",
+    is_flag=True,
+    help="Exclude module-level UPPER_CASE constants from output",
+)
 def project(
     path: str,
     max_depth: int | None,
     exclude: tuple[str, ...],
     no_docstrings: bool,
     no_private: bool,
+    no_constants: bool,
 ) -> None:
     """Summarize all Python files in a directory."""
     root = Path(path)
@@ -80,5 +96,10 @@ def project(
         except Exception as e:
             click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
 
-    output = render_project(modules, no_docstrings=no_docstrings, no_private=no_private)
+    output = render_project(
+        modules,
+        no_docstrings=no_docstrings,
+        no_private=no_private,
+        no_constants=no_constants,
+    )
     click.echo(output, nl=False)

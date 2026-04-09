@@ -299,3 +299,105 @@ def test_invalid_escape_no_syntax_warning(tmp_path):
     syntax_warnings = [w for w in caught if issubclass(w.category, SyntaxWarning)]
     assert syntax_warnings == [], f"SyntaxWarning(s) leaked: {syntax_warnings}"
     assert result.functions == []
+
+
+# --- Tests for constant extraction (#20) ---
+
+
+def test_extract_upper_case_assign(tmp_path):
+    source = "MAX_RETRIES = 3\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "MAX_RETRIES"
+    assert const.type_annotation is None
+    assert const.value == "3"
+
+
+def test_extract_annotated_assign(tmp_path):
+    source = "TIMEOUT: int = 30\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "TIMEOUT"
+    assert const.type_annotation == "int"
+    assert const.value == "30"
+
+
+def test_extract_annotation_only(tmp_path):
+    source = "BUFFER_SIZE: int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "BUFFER_SIZE"
+    assert const.type_annotation == "int"
+    assert const.value is None
+
+
+def test_extract_skips_lower_case(tmp_path):
+    source = "my_variable = 42\nanother: str = 'hello'\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []
+
+
+def test_extract_skips_multi_target_assign(tmp_path):
+    source = "A = B = 10\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []
+
+
+def test_extract_skips_tuple_unpack(tmp_path):
+    source = "X, Y = 1, 2\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []
+
+
+def test_extract_complex_value(tmp_path):
+    source = "DEFAULT_EXCLUDES: set[str] = {'__pycache__', '.git'}\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "DEFAULT_EXCLUDES"
+    assert const.type_annotation == "set[str]"
+    assert const.value is not None
+
+
+def test_extract_multiple_constants(tmp_path):
+    source = "MAX_RETRIES = 3\nTIMEOUT: int = 30\ndef func(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 2
+    assert len(result.functions) == 1
+
+
+def test_extract_mixed_case_skipped(tmp_path):
+    """Names like 'MyClass' or 'maxRetries' are not UPPER_CASE constants."""
+    source = "MyClass = type('MyClass', (), {})\nmaxRetries = 5\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []

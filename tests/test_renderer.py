@@ -1,4 +1,9 @@
-from api_squash.models import ClassSummary, FunctionSummary, ModuleSummary
+from api_squash.models import (
+    ClassSummary,
+    ConstantSummary,
+    FunctionSummary,
+    ModuleSummary,
+)
 from api_squash.renderer import render_module, render_project
 
 
@@ -526,3 +531,122 @@ def test_no_private_keeps_private_class_referenced_in_public_method():
     )
     output = render_module(module, no_private=True)
     assert "class _Result:" in output
+
+
+# --- Tests for constant rendering (#20) ---
+
+
+def test_render_constant_with_value():
+    module = ModuleSummary(
+        path="example.py",
+        constants=[ConstantSummary(name="MAX_RETRIES", value="3")],
+    )
+    output = render_module(module)
+    assert "MAX_RETRIES = 3" in output
+
+
+def test_render_constant_annotated():
+    module = ModuleSummary(
+        path="example.py",
+        constants=[ConstantSummary(name="TIMEOUT", type_annotation="int", value="30")],
+    )
+    output = render_module(module)
+    assert "TIMEOUT: int = 30" in output
+
+
+def test_render_constant_annotation_only():
+    module = ModuleSummary(
+        path="example.py",
+        constants=[ConstantSummary(name="BUFFER_SIZE", type_annotation="int")],
+    )
+    output = render_module(module)
+    assert "BUFFER_SIZE: int" in output
+    assert "= " not in output.split("BUFFER_SIZE")[1].split("\n")[0]
+
+
+def test_render_constants_before_classes_and_functions():
+    module = ModuleSummary(
+        path="example.py",
+        constants=[ConstantSummary(name="VERSION", value="'1.0'")],
+        classes=[ClassSummary(name="Foo", methods=[])],
+        functions=[FunctionSummary(name="bar", signature="()")],
+    )
+    output = render_module(module)
+    version_pos = output.index("VERSION")
+    foo_pos = output.index("class Foo")
+    bar_pos = output.index("def bar")
+    assert version_pos < foo_pos < bar_pos
+
+
+def test_render_no_constants_flag():
+    module = ModuleSummary(
+        path="example.py",
+        constants=[ConstantSummary(name="MAX_RETRIES", value="3")],
+        functions=[FunctionSummary(name="run", signature="()")],
+    )
+    output = render_module(module, no_constants=True)
+    assert "MAX_RETRIES" not in output
+    assert "def run()" in output
+
+
+def test_render_no_private_filters_private_constants():
+    module = ModuleSummary(
+        path="example.py",
+        constants=[
+            ConstantSummary(name="_INTERNAL", value="True"),
+            ConstantSummary(name="PUBLIC_CONST", value="42"),
+        ],
+    )
+    output = render_module(module, no_private=True)
+    assert "_INTERNAL" not in output
+    assert "PUBLIC_CONST = 42" in output
+
+
+def test_render_constants_default_on():
+    """Constants are rendered by default (no flag needed)."""
+    module = ModuleSummary(
+        path="example.py",
+        constants=[ConstantSummary(name="API_VERSION", value="'2.0'")],
+    )
+    output = render_module(module)
+    assert "API_VERSION = '2.0'" in output
+
+
+def test_render_project_passes_no_constants():
+    modules = [
+        ModuleSummary(
+            path="a.py",
+            constants=[ConstantSummary(name="FOO", value="1")],
+            functions=[FunctionSummary(name="func_a", signature="()")],
+        ),
+    ]
+    output = render_project(modules, no_constants=True)
+    assert "FOO" not in output
+    assert "func_a" in output
+
+
+def test_render_empty_module_with_constants():
+    """A module with only constants should not appear empty."""
+    module = ModuleSummary(
+        path="config.py",
+        constants=[
+            ConstantSummary(name="DEFAULT_PORT", type_annotation="int", value="8080")
+        ],
+    )
+    output = render_module(module)
+    assert "# config.py" in output
+    assert "DEFAULT_PORT: int = 8080" in output
+
+
+def test_render_multiple_constants_grouped():
+    """Multiple constants should be on consecutive lines without blank lines between them."""
+    module = ModuleSummary(
+        path="config.py",
+        constants=[
+            ConstantSummary(name="MAX_RETRIES", value="3"),
+            ConstantSummary(name="TIMEOUT", type_annotation="int", value="30"),
+            ConstantSummary(name="BUFFER_SIZE", value="1024"),
+        ],
+    )
+    output = render_module(module)
+    assert "MAX_RETRIES = 3\nTIMEOUT: int = 30\nBUFFER_SIZE = 1024" in output

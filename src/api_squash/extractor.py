@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import ast
+import re
 import warnings
 from pathlib import Path
 
-from .models import ClassSummary, FunctionSummary, ModuleSummary
+from .models import ClassSummary, ConstantSummary, FunctionSummary, ModuleSummary
 
 PRESERVED_DECORATORS = {"property", "classmethod", "staticmethod", "overload"}
+
+_CONSTANT_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
 def extract_file(path: Path) -> ModuleSummary:
@@ -17,17 +20,23 @@ def extract_file(path: Path) -> ModuleSummary:
 
     classes: list[ClassSummary] = []
     functions: list[FunctionSummary] = []
+    constants: list[ConstantSummary] = []
 
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.ClassDef):
             classes.append(_extract_class(node))
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             functions.append(_extract_function(node))
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            const = _extract_constant(node)
+            if const is not None:
+                constants.append(const)
 
     return ModuleSummary(
         path=path.as_posix(),
         classes=classes,
         functions=functions,
+        constants=constants,
     )
 
 
@@ -135,3 +144,24 @@ def _build_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
         sig += f" -> {ast.unparse(node.returns)}"
 
     return sig
+
+
+def _extract_constant(node: ast.Assign | ast.AnnAssign) -> ConstantSummary | None:
+    if isinstance(node, ast.AnnAssign):
+        if not isinstance(node.target, ast.Name):
+            return None
+        name = node.target.id
+        if not _CONSTANT_NAME_RE.match(name):
+            return None
+        type_annotation = ast.unparse(node.annotation)
+        value = ast.unparse(node.value) if node.value is not None else None
+        return ConstantSummary(name=name, type_annotation=type_annotation, value=value)
+
+    # ast.Assign — require a single Name target
+    if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+        return None
+    name = node.targets[0].id
+    if not _CONSTANT_NAME_RE.match(name):
+        return None
+    value = ast.unparse(node.value)
+    return ConstantSummary(name=name, value=value)
