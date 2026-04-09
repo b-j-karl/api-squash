@@ -36,9 +36,7 @@ def file(path: str, no_docstrings: bool, no_private: bool) -> None:
 
     module.path = Path(path).as_posix()
 
-    output = render_module(
-        module, no_docstrings=no_docstrings, no_private=no_private
-    )
+    output = render_module(module, no_docstrings=no_docstrings, no_private=no_private)
     click.echo(output, nl=False)
 
 
@@ -78,7 +76,5 @@ def project(
         except Exception as e:
             click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
 
-    output = render_project(
-        modules, no_docstrings=no_docstrings, no_private=no_private
-    )
+    output = render_project(modules, no_docstrings=no_docstrings, no_private=no_private)
     click.echo(output, nl=False)

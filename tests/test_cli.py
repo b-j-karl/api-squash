@@ -87,9 +87,7 @@ def test_project_command_with_exclude(tmp_path):
     (tmp_path / "app.py").write_text("def main(): pass\n", encoding="utf-8")
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
-    (tests_dir / "test_app.py").write_text(
-        "def test_main(): pass\n", encoding="utf-8"
-    )
+    (tests_dir / "test_app.py").write_text("def test_main(): pass\n", encoding="utf-8")
 
     runner = CliRunner()
     result = runner.invoke(cli, ["project", str(tmp_path), "--exclude", "tests/*"])

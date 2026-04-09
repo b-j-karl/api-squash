@@ -37,7 +37,9 @@ def test_function_with_defaults(tmp_path):
 
 
 def test_async_function(tmp_path):
-    source = 'async def fetch(url: str) -> bytes:\n    """Fetch URL content."""\n    pass\n'
+    source = (
+        'async def fetch(url: str) -> bytes:\n    """Fetch URL content."""\n    pass\n'
+    )
     p = tmp_path / "example.py"
     p.write_text(source, encoding="utf-8")
     result = extract_file(p)
@@ -50,15 +52,15 @@ def test_async_function(tmp_path):
 
 def test_class_with_methods(tmp_path):
     source = (
-        'class Calculator:\n'
+        "class Calculator:\n"
         '    """A simple calculator."""\n'
-        '\n'
-        '    def add(self, a: int, b: int) -> int:\n'
+        "\n"
+        "    def add(self, a: int, b: int) -> int:\n"
         '        """Add two numbers."""\n'
-        '        return a + b\n'
-        '\n'
-        '    def subtract(self, a: int, b: int) -> int:\n'
-        '        return a - b\n'
+        "        return a + b\n"
+        "\n"
+        "    def subtract(self, a: int, b: int) -> int:\n"
+        "        return a - b\n"
     )
     p = tmp_path / "example.py"
     p.write_text(source, encoding="utf-8")
@@ -126,16 +128,16 @@ def test_empty_file(tmp_path):
 
 def test_multiline_docstring(tmp_path):
     source = (
-        'def process(data: list[int]) -> list[int]:\n'
+        "def process(data: list[int]) -> list[int]:\n"
         '    """Process the data.\n'
-        '\n'
-        '    Args:\n'
-        '        data: List of integers to process.\n'
-        '\n'
-        '    Returns:\n'
-        '        Processed list of integers.\n'
+        "\n"
+        "    Args:\n"
+        "        data: List of integers to process.\n"
+        "\n"
+        "    Returns:\n"
+        "        Processed list of integers.\n"
         '    """\n'
-        '    return data\n'
+        "    return data\n"
     )
     p = tmp_path / "example.py"
     p.write_text(source, encoding="utf-8")
