@@ -30,4 +30,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - run: uv sync --locked --dev
-      - run: uv run pytest -v
+      - run: uv run pytest -v --cov=api_squash --cov-report=xml
+      - if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
