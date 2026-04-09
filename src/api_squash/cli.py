@@ -19,7 +19,9 @@ def cli() -> None:
 @click.argument("path", type=click.Path(exists=True))
 @click.option("--no-docstrings", is_flag=True, help="Strip all docstrings")
 @click.option(
-    "--no-private", is_flag=True, help="Skip private methods (except __init__)"
+    "--no-private",
+    is_flag=True,
+    help="Skip private classes/methods (except __init__); keeps items referenced by public signatures",
 )
 def file(path: str, no_docstrings: bool, no_private: bool) -> None:
     """Summarize a single Python file."""
@@ -48,7 +50,9 @@ def file(path: str, no_docstrings: bool, no_private: bool) -> None:
 @click.option("--exclude", multiple=True, help="Glob patterns to exclude")
 @click.option("--no-docstrings", is_flag=True, help="Strip all docstrings")
 @click.option(
-    "--no-private", is_flag=True, help="Skip private methods (except __init__)"
+    "--no-private",
+    is_flag=True,
+    help="Skip private classes/methods (except __init__); keeps items referenced by public signatures",
 )
 def project(
     path: str,

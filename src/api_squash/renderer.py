@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .models import ClassSummary, FunctionSummary, ModuleSummary
 
 
@@ -11,13 +13,19 @@ def render_module(
 ) -> str:
     lines = [f"# {module.path}"]
 
+    keep_names: set[str] = set()
+    if no_private:
+        keep_names = _collect_referenced_private_names(module)
+
     items: list[str] = []
     for cls in module.classes:
+        if no_private and _is_private(cls.name) and cls.name not in keep_names:
+            continue
         items.append(
             _render_class(cls, no_docstrings=no_docstrings, no_private=no_private)
         )
     for func in module.functions:
-        if no_private and _is_private(func.name):
+        if no_private and _is_private(func.name) and func.name not in keep_names:
             continue
         items.append(_render_function(func, indent=0, no_docstrings=no_docstrings))
 
@@ -105,3 +113,42 @@ def _format_docstring(docstring: str, *, indent: int) -> str:
 
 def _is_private(name: str) -> bool:
     return name.startswith("_")
+
+
+def _collect_referenced_private_names(module: ModuleSummary) -> set[str]:
+    """Find private names referenced in public signatures or class bases."""
+    private_names: set[str] = set()
+    for cls in module.classes:
+        if _is_private(cls.name):
+            private_names.add(cls.name)
+    for func in module.functions:
+        if _is_private(func.name):
+            private_names.add(func.name)
+
+    if not private_names:
+        return set()
+
+    pattern = re.compile(
+        r"\b(" + "|".join(re.escape(n) for n in private_names) + r")\b"
+    )
+
+    keep: set[str] = set()
+
+    for cls in module.classes:
+        is_public_cls = not _is_private(cls.name)
+        if is_public_cls:
+            for base in cls.bases:
+                keep.update(pattern.findall(base))
+        for method in cls.methods:
+            # Scan public methods and __init__ (which is always kept)
+            is_visible = is_public_cls and (
+                not _is_private(method.name) or method.name == "__init__"
+            )
+            if is_visible:
+                keep.update(pattern.findall(method.signature))
+
+    for func in module.functions:
+        if not _is_private(func.name):
+            keep.update(pattern.findall(func.signature))
+
+    return keep & private_names
