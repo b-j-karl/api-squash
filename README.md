@@ -11,6 +11,8 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+<img src="docs/benchmark-chart.svg" alt="Benchmark chart showing 61–90% compression across real Python packages" width="680">
+
 </div>
 
 ## The Problem
@@ -130,10 +132,6 @@ class AcmeClient:
 ```
 
 ## Benchmarks
-
-<div align="center">
-<img src="docs/benchmark-chart.svg" alt="Benchmark chart showing 61-90% compression across real Python packages" width="680">
-</div>
 
 <!-- bench-start -->
 | Package | Source files | Source lines | Output lines | Compression | ≈ Tokens |
