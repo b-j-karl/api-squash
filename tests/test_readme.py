@@ -1,7 +1,8 @@
-"""Guard against benchmark data in README and SVG chart drifting from reality.
+"""Guard against README and SVG benchmark data drifting from reality.
 
 Re-runs api-squash against the same installed packages and compares results
-to the values hardcoded in README.md and docs/benchmark-chart.svg.
+to the values published in README.md and docs/benchmark-chart.svg.  Also
+verifies the README table exactly matches the output of scripts/benchmark.py.
 """
 
 from __future__ import annotations
@@ -16,12 +17,19 @@ import pytest
 from api_squash.extractor import extract_file
 from api_squash.renderer import render_project
 from api_squash.scanner import scan_directory
+from scripts.benchmark import (
+    BENCH_END,
+    BENCH_START,
+    PACKAGES,
+    benchmark_package,
+    generate_table,
+)
+
+pytestmark = pytest.mark.benchmark
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 SVG = ROOT / "docs" / "benchmark-chart.svg"
-
-PACKAGES = ["click", "requests", "flask", "django", "fastapi"]
 
 
 # ---------------------------------------------------------------------------
@@ -32,18 +40,30 @@ PACKAGES = ["click", "requests", "flask", "django", "fastapi"]
 def _find_package_source(package_name: str) -> Path:
     spec = importlib.util.find_spec(package_name)
     if spec is None:
-        raise RuntimeError(f"Cannot find installed package: {package_name}")
+        pytest.skip(
+            f"Benchmark drift test requires installed package '{package_name}', "
+            "but it is not available."
+        )
     if spec.submodule_search_locations:
         return Path(next(iter(spec.submodule_search_locations)))
     if spec.origin is None:
-        raise RuntimeError(f"Cannot find installed package: {package_name}")
+        pytest.skip(
+            f"Benchmark drift test requires installed package '{package_name}', "
+            "but its source location could not be resolved."
+        )
     return Path(spec.origin).parent
 
 
 def _benchmark(package_name: str) -> dict:
     """Return live benchmark numbers for a single package."""
     src_dir = _find_package_source(package_name)
-    version = importlib.metadata.version(package_name)
+    try:
+        version = importlib.metadata.version(package_name)
+    except importlib.metadata.PackageNotFoundError:
+        pytest.skip(
+            f"Benchmark drift test requires installed distribution '{package_name}', "
+            "but version metadata is not available."
+        )
     py_files = scan_directory(src_dir)
 
     source_lines = 0
@@ -92,7 +112,6 @@ def _parse_readme_table(text: str) -> dict[str, dict]:
             continue
         if in_table and line.startswith("|"):
             cells = [c.strip() for c in line.split("|")[1:-1]]
-            # cells: package+version, source_files, source_lines, output_lines, compression, tokens
             pkg_ver = cells[0]
             pkg = pkg_ver.rsplit(" ", 1)[0]
             results[pkg] = {
@@ -113,7 +132,6 @@ def _parse_svg_tokens(text: str) -> dict[str, dict]:
     followed by three ``<text>`` value labels.
     """
     results: dict[str, dict] = {}
-    # Match comment lines: <!-- package — source / default / max -->
     pattern = re.compile(
         r"<!--\s*(\w+)\s.*?(\d+(?:\.\d+)?[kM])\s*/\s*(\d+(?:\.\d+)?[kM])\s*/\s*(\d+(?:\.\d+)?[kM])"
     )
@@ -136,11 +154,35 @@ def _parse_label(label: str) -> int:
     return int(label)
 
 
+def _extract_readme_table_text(readme_path: Path = README) -> str:
+    """Extract the raw benchmark table between markers from README."""
+    text = readme_path.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf"{re.escape(BENCH_START)}\n(.*?)\n{re.escape(BENCH_END)}",
+        re.DOTALL,
+    )
+    match = pattern.search(text)
+    if match is None:
+        pytest.fail(f"Could not find {BENCH_START} / {BENCH_END} markers in README.md")
+    return match.group(1)
+
+
+def _readme_package_versions(table: str) -> dict[str, str]:
+    """Parse ``{package: version}`` from the first column of the README table."""
+    versions: dict[str, str] = {}
+    for line in table.splitlines():
+        if line.startswith("|") and "---" not in line:
+            cell = line.split("|")[1].strip()
+            parts = cell.rsplit(" ", 1)
+            if len(parts) == 2:
+                versions[parts[0].lower()] = parts[1]
+    return versions
+
+
 # ---------------------------------------------------------------------------
-# Tests
+# Fixtures
 # ---------------------------------------------------------------------------
 
-# Cache benchmarks across tests in this module (expensive to compute).
 _benchmark_cache: dict[str, dict] = {}
 
 
@@ -156,13 +198,18 @@ def live_benchmarks() -> dict[str, dict]:
     return _get_benchmarks()
 
 
+# ---------------------------------------------------------------------------
+# Tests — README table values match live data
+# ---------------------------------------------------------------------------
+
+
 class TestReadmeBenchmarkTable:
     """README benchmark table matches live data."""
 
     def test_table_present(self):
         text = README.read_text(encoding="utf-8")
         table = _parse_readme_table(text)
-        assert table, "No benchmark table found between markers in README.md"
+        assert table, "No benchmark table found in README.md"
 
     def test_all_packages_present(self):
         text = README.read_text(encoding="utf-8")
@@ -207,6 +254,46 @@ class TestReadmeBenchmarkTable:
             f"{pkg}: README says ≈{table[pkg]['approx_tokens']} tokens, "
             f"actual is {live_benchmarks[pkg]['output_chars'] // 4}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Tests — README table matches benchmark script output exactly
+# ---------------------------------------------------------------------------
+
+
+class TestReadmeTableMatchesScript:
+    """README benchmark table is an exact copy of what scripts/benchmark.py generates."""
+
+    def test_readme_benchmarks_match_live_results(self) -> None:
+        readme_table = _extract_readme_table_text()
+        readme_versions = _readme_package_versions(readme_table)
+
+        mismatches: list[str] = []
+        for pkg in PACKAGES:
+            installed = importlib.metadata.version(pkg)
+            readme_ver = readme_versions.get(pkg, "")
+            if installed != readme_ver:
+                mismatches.append(
+                    f"{pkg} (installed {installed}, README has {readme_ver})"
+                )
+
+        if mismatches:
+            pytest.skip(
+                "Installed package versions differ from README — "
+                "likely a different Python version: " + ", ".join(mismatches)
+            )
+
+        results = [benchmark_package(pkg) for pkg in PACKAGES]
+        expected_table = generate_table(results)
+        assert readme_table == expected_table, (
+            "README benchmark table is out of date. "
+            "Run `uv run python scripts/benchmark.py` to update it."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests — SVG chart token counts match live data
+# ---------------------------------------------------------------------------
 
 
 class TestSvgBenchmarkChart:
