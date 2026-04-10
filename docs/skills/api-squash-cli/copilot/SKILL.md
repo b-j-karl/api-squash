@@ -62,7 +62,7 @@ api-squash file [OPTIONS] PATH
 | Option | Description |
 |---|---|
 | `--no-docstrings` | Strip all docstrings from the output |
-| `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
 **Examples:**
@@ -86,10 +86,10 @@ api-squash project [OPTIONS] PATH
 | `--max-depth INTEGER` | Limit directory recursion depth |
 | `--exclude TEXT` | Glob patterns to exclude (repeatable) |
 | `--no-docstrings` | Strip all docstrings from the output |
-| `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
-Common directories (`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
+Common directories(`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
 `dist`) are excluded automatically.
 
 **Examples:**
