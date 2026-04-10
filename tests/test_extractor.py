@@ -493,6 +493,30 @@ def test_extract_multiple_type_aliases(tmp_path):
     assert "Coord" in names
 
 
+def test_extract_pep613_qualified_typing(tmp_path):
+    """typing.TypeAlias (qualified) should be recognised."""
+    source = "import typing\n\nUserId: typing.TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.type_aliases[0].name == "UserId"
+    assert result.type_aliases[0].value == "int"
+
+
+def test_extract_pep613_qualified_typing_extensions(tmp_path):
+    """typing_extensions.TypeAlias (qualified) should be recognised."""
+    source = "import typing_extensions\n\nUserId: typing_extensions.TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.type_aliases[0].name == "UserId"
+    assert result.type_aliases[0].value == "int"
+
+
 def test_extract_plain_annotation_not_type_alias(tmp_path):
     """A regular annotated assignment should NOT be treated as a type alias."""
     source = "MY_VAR: int = 42\n"

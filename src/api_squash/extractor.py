@@ -193,13 +193,19 @@ def _extract_constant(node: ast.Assign | ast.AnnAssign) -> ConstantSummary | Non
 _TYPE_ALIAS_ANNOTATIONS = {"TypeAlias"}
 
 
+def _is_type_alias_annotation(node: ast.expr) -> bool:
+    if isinstance(node, ast.Name):
+        return node.id in _TYPE_ALIAS_ANNOTATIONS
+    if isinstance(node, ast.Attribute):
+        return node.attr in _TYPE_ALIAS_ANNOTATIONS
+    return False
+
+
 def _extract_pep613_type_alias(node: ast.AnnAssign) -> TypeAliasSummary | None:
     """Extract PEP 613 type aliases: ``Name: TypeAlias = value``."""
     if not isinstance(node.target, ast.Name):
         return None
-    ann = node.annotation
-    ann_name = ann.id if isinstance(ann, ast.Name) else None
-    if ann_name not in _TYPE_ALIAS_ANNOTATIONS:
+    if not _is_type_alias_annotation(node.annotation):
         return None
     if node.value is None:
         return None
