@@ -42,7 +42,8 @@ pip install api-squash
 ```
 
 If `api-squash` is not installed, install it before proceeding. In development
-repos that bundle it, use `uv run api-squash` instead.
+repos that bundle it, use `uv run api-squash` instead. To run without
+installation, use `uvx api-squash`.
 
 ---
 
@@ -58,6 +59,7 @@ api-squash file [OPTIONS] PATH
 |---|---|
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
 **Examples:**
 
@@ -81,6 +83,7 @@ api-squash project [OPTIONS] PATH
 | `--exclude TEXT` | Glob patterns to exclude (repeatable) |
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
 Common directories (`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
 `dist`) are excluded automatically.
@@ -161,6 +164,7 @@ api-squash project src/ > api-surface.md
 | Quick structural overview | `--no-docstrings` |
 | Minimal token budget | `--no-docstrings --no-private` |
 | Top-level architecture only | `--max-depth 1 --no-docstrings` |
+| Large codebase (30+ files) | `--max-depth 1 --no-docstrings`, then drill into subpackages |
 | Exclude test files | `--exclude "tests/*" --exclude "test_*"` |
 
 ### Combining with other tools
