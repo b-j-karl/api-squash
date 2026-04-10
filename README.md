@@ -17,28 +17,27 @@
 
 AI coding assistants need to understand your codebase's structure, but pasting
 full source files into a prompt wastes most of your context window on function
-bodies, comments, and boilerplate the agent doesn't need.
+bodies, comments, and boilerplate the model doesn't need.
 
 For a package like `requests`, that's **5,600 lines of source** to convey what
 **1,500 lines of signatures** could say.
 
-api-squash parses Python source with the AST and produces compact Markdown
-containing only the public API surface — classes, functions, signatures, and
-type annotations — so AI agents can ingest a full project's interface in a
-fraction of the tokens.
+api-squash walks Python source with the AST and outputs Markdown containing
+only the public API surface: classes, functions, signatures, and type
+annotations. Your agent gets the full picture in a fraction of the tokens.
 
 <div align="center">
-<img src="docs/benchmark-chart.svg" alt="Benchmark chart showing 61–90% token compression across real Python packages" width="680">
+<img src="docs/benchmark-chart.svg" alt="Benchmark chart showing 61-90% token compression across real Python packages" width="680">
 </div>
 
 ## Features
 
-- **AST-based, not regex** — correctly handles type annotations, generics, `@overload`, decorators, nested classes
-- **60–90% token savings** — measured across real packages from requests to Django
-- **Zero config** — auto-excludes `__pycache__`, `.venv`, `node_modules`, `build`
-- **Single dependency** — just Click; installs in seconds
-- **AI-agent ready** — ships with skills for GitHub Copilot CLI and Claude Code
-- **Tunable output** — `--no-docstrings`, `--no-private`, `--no-constants`, `--wrap` for full control over verbosity
+- **AST-based, not regex.** Correctly handles type annotations, generics, `@overload`, decorators, nested classes.
+- **60-90% fewer tokens** across real packages from requests to Django.
+- **Zero config.** Auto-excludes `__pycache__`, `.venv`, `node_modules`, `build`.
+- **Single dependency** (just Click). Installs in seconds.
+- **AI-agent ready.** Ships with skills for GitHub Copilot CLI and Claude Code.
+- **Tunable output.** `--no-docstrings`, `--no-private`, `--no-constants`, `--wrap` for control over verbosity.
 
 ## Installation
 
@@ -120,7 +119,7 @@ class AcmeClient:
   def _build_url(self, path: str) -> str
 ```
 
-With `--no-docstrings --no-private`, the output shrinks further:
+With `--no-docstrings --no-private`, it gets even shorter:
 
 ```
 # example_api.py
@@ -147,19 +146,19 @@ class AcmeClient:
 
 *Reproduce with `uv run python scripts/benchmark.py`.*
 
-> **Tip — large codebases:** If the project has more than ~30 source files,
-> start with `--max-depth 1 --no-docstrings` to get a high-level overview,
-> then drill into specific subpackages as needed.
+> **Tip for large codebases:** If the project has more than ~30 source files,
+> start with `--max-depth 1 --no-docstrings` for a high-level overview,
+> then drill into specific subpackages.
 
 ## Why api-squash?
 
 | Approach | Limitation |
 |---|---|
-| Paste full source files | 80–90% of tokens wasted on function bodies |
+| Paste full source files | 80-90% of tokens wasted on function bodies |
 | `grep -r "def "` | Misses signatures, types, class structure |
 | IDE "outline" view | Not scriptable, can't feed to an LLM |
 | tree-sitter queries | Requires writing custom queries per language |
-| **api-squash** | **One command, full API map, token-efficient output** |
+| **api-squash** | **One command, full API map, way fewer tokens** |
 
 ## CLI Reference
 
@@ -201,11 +200,11 @@ Common directories like `__pycache__`, `.venv`, `.git`, `node_modules`,
 ## AI Agent Integration
 
 api-squash ships with skills for **GitHub Copilot CLI** and **Claude Code**.
-Clone the repo and your AI assistant automatically discovers how to use it.
+Clone the repo and your AI assistant picks them up automatically.
 
-The `python-code-context` skill teaches agents to run api-squash before coding
-tasks — loading structural context automatically instead of reading files one
-by one.
+The `python-code-context` skill tells agents to run api-squash before coding
+tasks, so they load the project structure up front instead of reading files
+one by one.
 
 See [`docs/skills/`](docs/skills/) for skill documentation.
 
