@@ -20,12 +20,13 @@
   </style>
 
   <!-- Legend -->
-  <rect x="140" y="6" width="12" height="12" rx="2" class="bar-source"/>
-  <text x="156" y="16" class="legend-text">Raw source</text>
-  <rect x="240" y="6" width="12" height="12" rx="2" class="bar-default"/>
-  <text x="256" y="16" class="legend-text">Default flags</text>
-  <rect x="356" y="6" width="12" height="12" rx="2" class="bar-max"/>
-  <text x="372" y="16" class="legend-text">--no-docstrings --no-private</text>
+  <text x="140" y="16" class="legend-text" font-weight="600">Tokens:</text>
+  <rect x="190" y="6" width="12" height="12" rx="2" class="bar-source"/>
+  <text x="206" y="16" class="legend-text">Raw source</text>
+  <rect x="290" y="6" width="12" height="12" rx="2" class="bar-default"/>
+  <text x="306" y="16" class="legend-text">Default flags</text>
+  <rect x="396" y="6" width="12" height="12" rx="2" class="bar-max"/>
+  <text x="412" y="16" class="legend-text">--no-docstrings --no-private</text>
 
   <!-- click — 96k / 37k / 9k -->
   <text x="130" y="62" text-anchor="end" class="pkg">click</text>

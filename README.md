@@ -11,8 +11,6 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-<img src="docs/benchmark-chart.svg" alt="Benchmark chart showing 61–90% compression across real Python packages" width="680">
-
 </div>
 
 ## The Problem
@@ -28,6 +26,10 @@ api-squash parses Python source with the AST and produces compact Markdown
 containing only the public API surface — classes, functions, signatures, and
 type annotations — so AI agents can ingest a full project's interface in a
 fraction of the tokens.
+
+<div align="center">
+<img src="docs/benchmark-chart.svg" alt="Benchmark chart showing 61–90% token compression across real Python packages" width="680">
+</div>
 
 ## Features
 
