@@ -181,7 +181,16 @@ def _split_params(params_str: str) -> list[str]:
     current: list[str] = []
     in_quote: str | None = None
 
+    escaped = False
     for char in params_str:
+        if escaped:
+            current.append(char)
+            escaped = False
+            continue
+        if char == "\\":
+            current.append(char)
+            escaped = True
+            continue
         if in_quote is not None:
             current.append(char)
             if char == in_quote:

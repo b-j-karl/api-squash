@@ -823,3 +823,19 @@ def test_wrap_default_with_comma_in_string():
     output = render_module(module, wrap=20)
     assert "    sep: str = 'a,b'," in output
     assert "    end: str = 'x'," in output
+
+
+def test_wrap_default_with_escaped_quote_and_comma():
+    """Commas inside strings with escaped quotes should not split params."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="greet",
+                signature=r"""(msg: str = "he said \"hi,bye\"", end: str = 'x') -> None""",
+            )
+        ],
+    )
+    output = render_module(module, wrap=20)
+    assert r'    msg: str = "he said \"hi,bye\"",' in output
+    assert "    end: str = 'x'," in output
