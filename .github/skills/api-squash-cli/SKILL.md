@@ -89,7 +89,7 @@ api-squash project [OPTIONS] PATH
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
-Common directories(`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
+Common directories (`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
 `dist`) are excluded automatically.
 
 **Examples:**
