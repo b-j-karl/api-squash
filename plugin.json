@@ -1,0 +1,11 @@
+{
+  "name": "api-squash",
+  "description": "Skills for extracting Python API surfaces in a compact, token-efficient format",
+  "version": "0.1.0",
+  "author": {
+    "name": "b-j-karl"
+  },
+  "license": "MIT",
+  "keywords": ["python", "api", "summarizer", "agentic"],
+  "skills": [".github/skills/api-squash-cli", ".github/skills/python-code-context"]
+}
