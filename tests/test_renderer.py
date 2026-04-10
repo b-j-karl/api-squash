@@ -650,3 +650,146 @@ def test_render_multiple_constants_grouped():
     )
     output = render_module(module)
     assert "MAX_RETRIES = 3\nTIMEOUT: int = 30\nBUFFER_SIZE = 1024" in output
+
+
+# --- Tests for line wrapping (#14) ---
+
+
+def test_wrap_short_signature_unchanged():
+    """Signatures within the wrap width should not be wrapped."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[FunctionSummary(name="greet", signature="(name: str) -> str")],
+    )
+    output = render_module(module, wrap=80)
+    assert "def greet(name: str) -> str" in output
+    assert output.count("\n") < 5  # compact, no extra lines
+
+
+def test_wrap_long_signature():
+    """Signatures exceeding wrap width get one param per line."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="run_pipeline",
+                signature="(input_path: Path, output_path: Path, format: str, verbose: bool, workers: int, timeout: float, retries: int) -> Result",
+            )
+        ],
+    )
+    output = render_module(module, wrap=40)
+    assert "def run_pipeline(\n" in output
+    assert "    input_path: Path,\n" in output
+    assert "    retries: int,\n" in output
+    assert ") -> Result" in output
+
+
+def test_wrap_method_indented():
+    """Wrapped method signatures should respect class indentation."""
+    module = ModuleSummary(
+        path="example.py",
+        classes=[
+            ClassSummary(
+                name="MyClass",
+                methods=[
+                    FunctionSummary(
+                        name="process",
+                        signature="(self, data: list[int], threshold: float, normalize: bool, output_format: str) -> dict[str, Any]",
+                    )
+                ],
+            )
+        ],
+    )
+    output = render_module(module, wrap=40)
+    assert "  def process(\n" in output
+    assert "      self,\n" in output
+    assert "  ) -> dict[str, Any]" in output
+
+
+def test_wrap_preserves_nested_generics():
+    """Commas inside generic types should not cause splits."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="transform",
+                signature="(data: dict[str, list[int]], callback: Callable[[int, str], bool]) -> tuple[str, int]",
+            )
+        ],
+    )
+    output = render_module(module, wrap=40)
+    assert "    data: dict[str, list[int]]," in output
+    assert "    callback: Callable[[int, str], bool]," in output
+
+
+def test_wrap_async_function():
+    """Async functions should wrap correctly."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="fetch_data",
+                signature="(url: str, headers: dict[str, str], timeout: float, retries: int) -> Response",
+                is_async=True,
+            )
+        ],
+    )
+    output = render_module(module, wrap=40)
+    assert "async def fetch_data(\n" in output
+    assert ") -> Response" in output
+
+
+def test_wrap_none_does_not_wrap():
+    """When wrap is None (default), no wrapping occurs."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="long_func",
+                signature="(a: int, b: int, c: int, d: int, e: int, f: int, g: int) -> None",
+            )
+        ],
+    )
+    output = render_module(module)
+    assert "def long_func(a: int, b: int, c: int" in output
+    # Should be a single line
+    for line in output.splitlines():
+        if "def long_func" in line:
+            assert "-> None" in line
+            break
+
+
+def test_wrap_with_decorators():
+    """Decorators should appear before the wrapped signature."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="my_prop",
+                signature="(self, value: str, validate: bool, transform: Callable, default: str | None) -> None",
+                decorators=["property"],
+            )
+        ],
+    )
+    output = render_module(module, wrap=40)
+    lines = output.splitlines()
+    prop_line = next(i for i, line in enumerate(lines) if "@property" in line)
+    def_line = next(i for i, line in enumerate(lines) if "def my_prop(" in line)
+    assert def_line == prop_line + 1
+
+
+def test_wrap_project_passes_through():
+    """The wrap option should be passed through render_project."""
+    modules = [
+        ModuleSummary(
+            path="a.py",
+            functions=[
+                FunctionSummary(
+                    name="long_func",
+                    signature="(a: int, b: int, c: int, d: int, e: int, f: int) -> None",
+                )
+            ],
+        ),
+    ]
+    output = render_project(modules, wrap=40)
+    assert "def long_func(\n" in output

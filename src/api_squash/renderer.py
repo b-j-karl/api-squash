@@ -11,6 +11,7 @@ def render_module(
     no_docstrings: bool = False,
     no_private: bool = False,
     no_constants: bool = False,
+    wrap: int | None = None,
 ) -> str:
     lines = [f"# {module.path}"]
 
@@ -31,12 +32,16 @@ def render_module(
         if no_private and _is_private(cls.name) and cls.name not in keep_names:
             continue
         items.append(
-            _render_class(cls, no_docstrings=no_docstrings, no_private=no_private)
+            _render_class(
+                cls, no_docstrings=no_docstrings, no_private=no_private, wrap=wrap
+            )
         )
     for func in module.functions:
         if no_private and _is_private(func.name) and func.name not in keep_names:
             continue
-        items.append(_render_function(func, indent=0, no_docstrings=no_docstrings))
+        items.append(
+            _render_function(func, indent=0, no_docstrings=no_docstrings, wrap=wrap)
+        )
 
     if items:
         lines.append("")
@@ -51,6 +56,7 @@ def render_project(
     no_docstrings: bool = False,
     no_private: bool = False,
     no_constants: bool = False,
+    wrap: int | None = None,
 ) -> str:
     rendered = [
         render_module(
@@ -58,6 +64,7 @@ def render_project(
             no_docstrings=no_docstrings,
             no_private=no_private,
             no_constants=no_constants,
+            wrap=wrap,
         )
         for module in modules
     ]
@@ -78,6 +85,7 @@ def _render_class(
     *,
     no_docstrings: bool = False,
     no_private: bool = False,
+    wrap: int | None = None,
 ) -> str:
     parts: list[str] = []
 
@@ -92,7 +100,9 @@ def _render_class(
     for method in cls.methods:
         if no_private and _is_private(method.name) and method.name != "__init__":
             continue
-        parts.append(_render_function(method, indent=2, no_docstrings=no_docstrings))
+        parts.append(
+            _render_function(method, indent=2, no_docstrings=no_docstrings, wrap=wrap)
+        )
 
     return "\n".join(parts)
 
@@ -102,6 +112,7 @@ def _render_function(
     *,
     indent: int = 0,
     no_docstrings: bool = False,
+    wrap: int | None = None,
 ) -> str:
     prefix = " " * indent
     parts: list[str] = []
@@ -110,12 +121,77 @@ def _render_function(
         parts.append(f"{prefix}@{dec}")
 
     keyword = "async def" if func.is_async else "def"
-    parts.append(f"{prefix}{keyword} {func.name}{func.signature}")
+    single_line = f"{prefix}{keyword} {func.name}{func.signature}"
+
+    if wrap is not None and len(single_line) > wrap:
+        parts.append(_wrap_signature(func, indent=indent, keyword=keyword))
+    else:
+        parts.append(single_line)
 
     if func.docstring and not no_docstrings:
         parts.append(_format_docstring(func.docstring, indent=indent + 2))
 
     return "\n".join(parts)
+
+
+def _wrap_signature(func: FunctionSummary, *, indent: int, keyword: str) -> str:
+    """Render a function signature with one parameter per line."""
+    prefix = " " * indent
+    param_indent = " " * (indent + 4)
+
+    sig = func.signature
+    # Split "(params) -> return" into params and return type
+    paren_start = sig.index("(")
+    # Find the matching closing paren
+    depth = 0
+    paren_end = -1
+    for i in range(paren_start, len(sig)):
+        if sig[i] == "(":
+            depth += 1
+        elif sig[i] == ")":
+            depth -= 1
+            if depth == 0:
+                paren_end = i
+                break
+
+    params_str = sig[paren_start + 1 : paren_end]
+    return_annotation = sig[paren_end + 1 :]
+
+    params = _split_params(params_str)
+
+    lines = [f"{prefix}{keyword} {func.name}("]
+    for param in params:
+        lines.append(f"{param_indent}{param.strip()},")
+    lines.append(f"{prefix}){return_annotation}")
+
+    return "\n".join(lines)
+
+
+def _split_params(params_str: str) -> list[str]:
+    """Split parameter string at top-level commas, respecting bracket nesting."""
+    params: list[str] = []
+    depth = 0
+    current: list[str] = []
+
+    for char in params_str:
+        if char in "([{":
+            depth += 1
+            current.append(char)
+        elif char in ")]}":
+            depth -= 1
+            current.append(char)
+        elif char == "," and depth == 0:
+            params.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+
+    if current:
+        remaining = "".join(current).strip()
+        if remaining:
+            params.append("".join(current))
+
+    return params
 
 
 def _format_docstring(docstring: str, *, indent: int) -> str:

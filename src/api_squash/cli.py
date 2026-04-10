@@ -28,7 +28,19 @@ def cli() -> None:
     is_flag=True,
     help="Exclude module-level UPPER_CASE constants from output",
 )
-def file(path: str, no_docstrings: bool, no_private: bool, no_constants: bool) -> None:
+@click.option(
+    "--wrap",
+    type=int,
+    default=None,
+    help="Wrap long signatures at this width (one param per line)",
+)
+def file(
+    path: str,
+    no_docstrings: bool,
+    no_private: bool,
+    no_constants: bool,
+    wrap: int | None,
+) -> None:
     """Summarize a single Python file."""
     file_path = Path(path)
     if file_path.suffix != ".py":
@@ -48,6 +60,7 @@ def file(path: str, no_docstrings: bool, no_private: bool, no_constants: bool) -
         no_docstrings=no_docstrings,
         no_private=no_private,
         no_constants=no_constants,
+        wrap=wrap,
     )
     click.echo(output, nl=False)
 
@@ -69,6 +82,12 @@ def file(path: str, no_docstrings: bool, no_private: bool, no_constants: bool) -
     is_flag=True,
     help="Exclude module-level UPPER_CASE constants from output",
 )
+@click.option(
+    "--wrap",
+    type=int,
+    default=None,
+    help="Wrap long signatures at this width (one param per line)",
+)
 def project(
     path: str,
     max_depth: int | None,
@@ -76,6 +95,7 @@ def project(
     no_docstrings: bool,
     no_private: bool,
     no_constants: bool,
+    wrap: int | None,
 ) -> None:
     """Summarize all Python files in a directory."""
     root = Path(path)
@@ -101,5 +121,6 @@ def project(
         no_docstrings=no_docstrings,
         no_private=no_private,
         no_constants=no_constants,
+        wrap=wrap,
     )
     click.echo(output, nl=False)
