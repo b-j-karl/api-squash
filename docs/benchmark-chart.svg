@@ -36,14 +36,14 @@
   <rect x="140" y="68" width="34" height="14" rx="3" class="bar-max"/>
   <text x="180" y="79" class="val">9k</text>
 
-  <!-- requests — 47k / 14k / 2k -->
+  <!-- requests — 47k / 14k / 2.3k -->
   <text x="130" y="118" text-anchor="end" class="pkg">requests</text>
   <rect x="140" y="92" width="380" height="14" rx="3" class="bar-source"/>
   <text x="526" y="103" class="val">47k</text>
   <rect x="140" y="108" width="117" height="14" rx="3" class="bar-default"/>
   <text x="263" y="119" class="val">14k</text>
   <rect x="140" y="124" width="19" height="14" rx="3" class="bar-max"/>
-  <text x="165" y="135" class="val">2k</text>
+  <text x="165" y="135" class="val">2.3k</text>
 
   <!-- flask — 84k / 38k / 6k -->
   <text x="130" y="174" text-anchor="end" class="pkg">flask</text>
