@@ -1,6 +1,15 @@
+from importlib.metadata import version
+
 from click.testing import CliRunner
 
 from api_squash.cli import cli
+
+
+def test_version_flag():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["--version"])
+    assert result.exit_code == 0
+    assert version("api-squash") in result.output
 
 
 def test_file_command(tmp_path):
