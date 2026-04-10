@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 
+from .estimator import estimate, format_estimate
 from .extractor import extract_file
 from .renderer import render_module, render_project
 from .scanner import scan_directory
@@ -40,6 +41,11 @@ def cli() -> None:
     is_flag=True,
     help="Only include names listed in __all__ (modules without __all__ are unaffected)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show estimated output size without producing the full output",
+)
 def file(
     path: str,
     no_docstrings: bool,
@@ -47,6 +53,7 @@ def file(
     no_constants: bool,
     wrap: int | None,
     public_only: bool,
+    dry_run: bool,
 ) -> None:
     """Summarize a single Python file."""
     file_path = Path(path)
@@ -61,6 +68,18 @@ def file(
         sys.exit(1)
 
     module.path = Path(path).as_posix()
+
+    if dry_run:
+        result = estimate(
+            [module],
+            no_docstrings=no_docstrings,
+            no_private=no_private,
+            no_constants=no_constants,
+            public_only=public_only,
+            wrap=wrap,
+        )
+        click.echo(format_estimate(result), nl=False)
+        return
 
     output = render_module(
         module,
@@ -101,6 +120,11 @@ def file(
     is_flag=True,
     help="Only include names listed in __all__ (modules without __all__ are unaffected)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show estimated output size without producing the full output",
+)
 def project(
     path: str,
     max_depth: int | None,
@@ -110,6 +134,7 @@ def project(
     no_constants: bool,
     wrap: int | None,
     public_only: bool,
+    dry_run: bool,
 ) -> None:
     """Summarize all Python files in a directory."""
     root = Path(path)
@@ -129,6 +154,18 @@ def project(
             click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
         except Exception as e:
             click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
+
+    if dry_run:
+        result = estimate(
+            modules,
+            no_docstrings=no_docstrings,
+            no_private=no_private,
+            no_constants=no_constants,
+            public_only=public_only,
+            wrap=wrap,
+        )
+        click.echo(format_estimate(result), nl=False)
+        return
 
     output = render_project(
         modules,

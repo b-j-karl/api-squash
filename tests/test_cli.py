@@ -231,3 +231,102 @@ def test_project_command_public_only(tmp_path):
     assert "hidden" not in result.output
     # utils.py has no __all__, so everything shows
     assert "helper" in result.output
+
+
+# --- Tests for --dry-run flag (#23) ---
+
+
+def test_file_dry_run(tmp_path):
+    source = (
+        "MAX_RETRIES = 3\n"
+        "class MyClass:\n"
+        "    def method(self): pass\n"
+        "def func_a() -> int:\n"
+        '    """A function."""\n'
+        "    return 1\n"
+        "def func_b() -> str:\n"
+        '    return "b"\n'
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["file", str(p), "--dry-run"])
+    assert result.exit_code == 0
+    assert "Scanned 1 file:" in result.output
+    assert "1 classes" in result.output
+    assert "2 functions" in result.output
+    assert "1 constants" in result.output
+    assert "KB" in result.output
+    # Should NOT contain the actual rendered output
+    assert "def func_a" not in result.output
+
+
+def test_file_dry_run_no_rendered_output(tmp_path):
+    source = 'def greet(name: str) -> str:\n    """Say hello."""\n    return "hi"\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["file", str(p), "--dry-run"])
+    assert result.exit_code == 0
+    assert "def greet" not in result.output
+    assert "Say hello." not in result.output
+    assert "Scanned 1 file:" in result.output
+
+
+def test_project_dry_run(tmp_path):
+    (tmp_path / "a.py").write_text(
+        'def func_a() -> int:\n    """A function."""\n    return 1\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "b.py").write_text(
+        "class B:\n    def run(self): pass\n",
+        encoding="utf-8",
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["project", str(tmp_path), "--dry-run"])
+    assert result.exit_code == 0
+    assert "Scanned 2 files:" in result.output
+    assert "1 classes" in result.output
+    assert "1 functions" in result.output
+    assert "current flags" in result.output
+    assert "minimal" in result.output
+    # Should NOT contain the actual rendered output
+    assert "def func_a" not in result.output
+    assert "class B" not in result.output
+
+
+def test_file_dry_run_combined_with_no_docstrings(tmp_path):
+    source = 'def greet():\n    """Say hello."""\n    pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+
+    runner = CliRunner()
+    result_default = runner.invoke(cli, ["file", str(p), "--dry-run"])
+    result_no_docs = runner.invoke(
+        cli, ["file", str(p), "--dry-run", "--no-docstrings"]
+    )
+    assert result_default.exit_code == 0
+    assert result_no_docs.exit_code == 0
+    # Both should show summary, not rendered output
+    assert "Scanned 1 file:" in result_default.output
+    assert "Scanned 1 file:" in result_no_docs.output
+
+
+def test_project_dry_run_empty(tmp_path):
+    runner = CliRunner()
+    result = runner.invoke(cli, ["project", str(tmp_path), "--dry-run"])
+    # Empty project still prints "No Python files found" to stderr
+    assert result.exit_code == 0
+
+
+def test_file_dry_run_syntax_error(tmp_path):
+    p = tmp_path / "bad.py"
+    p.write_text("def broken(\n", encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["file", str(p), "--dry-run"])
+    assert result.exit_code != 0
+    assert "Failed to parse" in result.output
