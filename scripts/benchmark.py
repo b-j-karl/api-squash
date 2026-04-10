@@ -50,13 +50,17 @@ class BenchmarkResult:
 def _find_package_source(package_name: str) -> Path:
     """Locate the installed source directory for a package."""
     spec = importlib.util.find_spec(package_name)
-    if spec is None or spec.origin is None:
+    if spec is None:
         raise RuntimeError(f"Cannot find installed package: {package_name}")
-    origin = Path(spec.origin)
-    # origin is typically <site-packages>/<pkg>/__init__.py
-    if origin.name == "__init__.py":
-        return origin.parent
-    return origin.parent
+
+    # Namespace packages have no origin but do have search locations
+    if spec.submodule_search_locations:
+        return Path(next(iter(spec.submodule_search_locations)))
+
+    if spec.origin is None:
+        raise RuntimeError(f"Cannot find installed package: {package_name}")
+
+    return Path(spec.origin).parent
 
 
 def benchmark_package(package_name: str) -> BenchmarkResult:
@@ -67,19 +71,26 @@ def benchmark_package(package_name: str) -> BenchmarkResult:
     py_files = scan_directory(src_dir)
     source_lines = 0
     for f in py_files:
-        source_lines += f.read_text(encoding="utf-8").count("\n")
+        source_lines += len(f.read_text(encoding="utf-8").splitlines())
 
     modules = []
+    skipped_files: list[str] = []
     for file_path in py_files:
         try:
             module = extract_file(file_path)
             module.path = file_path.relative_to(src_dir).as_posix()
             modules.append(module)
-        except (SyntaxError, Exception):
+        except (SyntaxError, UnicodeDecodeError, OSError) as exc:
+            skipped_files.append(
+                f"{file_path.relative_to(src_dir).as_posix()} ({type(exc).__name__})"
+            )
             continue
 
+    if skipped_files:
+        print(f"  Skipped {len(skipped_files)} file(s): " + ", ".join(skipped_files))
+
     output = render_project(modules) if modules else ""
-    output_lines = output.count("\n")
+    output_lines = len(output.splitlines())
     output_chars = len(output)
 
     return BenchmarkResult(

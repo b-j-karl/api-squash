@@ -54,6 +54,7 @@ def _readme_package_versions(table: str) -> dict[str, str]:
     return versions
 
 
+@pytest.mark.benchmark
 def test_readme_benchmarks_match_live_results() -> None:
     """README benchmark table must match freshly computed results."""
     readme_table = _extract_readme_table()
