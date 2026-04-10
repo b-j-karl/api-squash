@@ -3,7 +3,7 @@
 > Extract Python API surfaces in a compact, token-efficient format.
 
 [![CI](https://github.com/b-j-karl/api-squash/actions/workflows/ci.yml/badge.svg)](https://github.com/b-j-karl/api-squash/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/b-j-karl/api-squash/graph/badge.svg)](https://codecov.io/gh/b-j-karl/api-squash)
+[![codecov](https://codecov.io/gh/b-j-karl/api-squash/branch/develop/graph/badge.svg)](https://codecov.io/gh/b-j-karl/api-squash)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -27,6 +27,12 @@ programmatically.
 
 ```bash
 pip install api-squash
+```
+
+Or run without installing via [uvx](https://docs.astral.sh/uv/guides/tools/):
+
+```bash
+uvx api-squash --help
 ```
 
 For development:
@@ -130,7 +136,8 @@ Usage: api-squash file [OPTIONS] PATH
 | Option | Description |
 |---|---|
 | `--no-docstrings` | Strip all docstrings from the output |
-| `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
+| `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
 ### `api-squash project`
 
@@ -145,10 +152,16 @@ Usage: api-squash project [OPTIONS] PATH
 | `--max-depth INTEGER` | Limit directory recursion depth |
 | `--exclude TEXT` | Glob patterns to exclude (can be repeated) |
 | `--no-docstrings` | Strip all docstrings from the output |
-| `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
+| `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
 Common directories like `__pycache__`, `.venv`, `.git`, `node_modules`,
 `build`, and `dist` are skipped automatically.
+
+> **Tip — large codebases:** If the project has more than ~30 source files,
+> start with `--max-depth 1 --no-docstrings` to get a high-level overview,
+> then drill into specific subpackages as needed. This avoids flooding an
+> LLM's context window with the full API surface.
 
 ## Output Format
 

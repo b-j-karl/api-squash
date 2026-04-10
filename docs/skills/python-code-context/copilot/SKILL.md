@@ -59,6 +59,8 @@ Before running anything, decide what you need:
 Run the appropriate command and read the output directly. The output is
 Markdown that lists every class and function signature in the target.
 
+If `api-squash` is not on PATH, use `uvx api-squash` instead.
+
 ```bash
 # Example: survey a project's public API
 api-squash project --no-private src/
