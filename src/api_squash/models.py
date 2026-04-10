@@ -40,3 +40,4 @@ class ModuleSummary:
     functions: list[FunctionSummary] = field(default_factory=list)
     constants: list[ConstantSummary] = field(default_factory=list)
     type_aliases: list[TypeAliasSummary] = field(default_factory=list)
+    dunder_all: list[str] | None = None

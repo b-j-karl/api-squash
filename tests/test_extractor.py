@@ -525,3 +525,66 @@ def test_extract_plain_annotation_not_type_alias(tmp_path):
     result = extract_file(p)
 
     assert result.type_aliases == []
+
+
+# --- Tests for __all__ extraction (#19) ---
+
+
+def test_extract_dunder_all_list(tmp_path):
+    """__all__ as a list of strings should be extracted."""
+    source = '__all__ = ["Foo", "bar"]\ndef Foo(): pass\ndef bar(): pass\ndef _internal(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo", "bar"]
+
+
+def test_extract_dunder_all_tuple(tmp_path):
+    """__all__ as a tuple of strings should be extracted."""
+    source = '__all__ = ("Foo",)\ndef Foo(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo"]
+
+
+def test_extract_dunder_all_empty(tmp_path):
+    """An empty __all__ should yield an empty list (not None)."""
+    source = "__all__ = []\ndef Foo(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == []
+
+
+def test_extract_dunder_all_not_defined(tmp_path):
+    """Module without __all__ should have dunder_all=None."""
+    source = "def Foo(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None
+
+
+def test_extract_dunder_all_dynamic_ignored(tmp_path):
+    """Dynamic __all__ (e.g. dir()) can't be resolved, treated as absent."""
+    source = "__all__ = dir()\ndef Foo(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None
+
+
+def test_extract_dunder_all_non_string_ignored(tmp_path):
+    """__all__ with non-string elements can't be resolved, treated as absent."""
+    source = "__all__ = [Foo, 1]\nclass Foo: pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None

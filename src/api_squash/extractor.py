@@ -60,6 +60,7 @@ def extract_file(path: Path) -> ModuleSummary:
         functions=functions,
         constants=constants,
         type_aliases=type_aliases,
+        dunder_all=_extract_dunder_all(tree),
     )
 
 
@@ -224,3 +225,23 @@ def _extract_pep695_type_alias(node: ast.TypeAlias) -> TypeAliasSummary:
         type_params=type_params,
         is_type_statement=True,
     )
+
+
+def _extract_dunder_all(tree: ast.Module) -> list[str] | None:
+    """Extract ``__all__`` from a module AST if it's a static list/tuple of strings."""
+    for node in ast.iter_child_nodes(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+            continue
+        if node.targets[0].id != "__all__":
+            continue
+        if not isinstance(node.value, (ast.List, ast.Tuple)):
+            return None
+        names: list[str] = []
+        for elt in node.value.elts:
+            if not isinstance(elt, ast.Constant) or not isinstance(elt.value, str):
+                return None
+            names.append(elt.value)
+        return names
+    return None
