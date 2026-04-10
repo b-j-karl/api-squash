@@ -34,12 +34,18 @@ def cli() -> None:
     default=None,
     help="Wrap long signatures at this width (one param per line)",
 )
+@click.option(
+    "--public-only",
+    is_flag=True,
+    help="Only include names listed in __all__ (modules without __all__ are unaffected)",
+)
 def file(
     path: str,
     no_docstrings: bool,
     no_private: bool,
     no_constants: bool,
     wrap: int | None,
+    public_only: bool,
 ) -> None:
     """Summarize a single Python file."""
     file_path = Path(path)
@@ -60,6 +66,7 @@ def file(
         no_docstrings=no_docstrings,
         no_private=no_private,
         no_constants=no_constants,
+        public_only=public_only,
         wrap=wrap,
     )
     click.echo(output, nl=False)
@@ -88,6 +95,11 @@ def file(
     default=None,
     help="Wrap long signatures at this width (one param per line)",
 )
+@click.option(
+    "--public-only",
+    is_flag=True,
+    help="Only include names listed in __all__ (modules without __all__ are unaffected)",
+)
 def project(
     path: str,
     max_depth: int | None,
@@ -96,6 +108,7 @@ def project(
     no_private: bool,
     no_constants: bool,
     wrap: int | None,
+    public_only: bool,
 ) -> None:
     """Summarize all Python files in a directory."""
     root = Path(path)
@@ -121,6 +134,7 @@ def project(
         no_docstrings=no_docstrings,
         no_private=no_private,
         no_constants=no_constants,
+        public_only=public_only,
         wrap=wrap,
     )
     click.echo(output, nl=False)

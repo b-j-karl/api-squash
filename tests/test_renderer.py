@@ -917,3 +917,162 @@ def test_wrap_default_with_escaped_quote_and_comma():
     output = render_module(module, wrap=20)
     assert r'    msg: str = "he said \"hi,bye\"",' in output
     assert "    end: str = 'x'," in output
+
+
+# --- Tests for --public-only / __all__ filtering (#19) ---
+
+
+def test_render_public_only_filters_by_dunder_all():
+    """When public_only=True and __all__ is set, only listed names are rendered."""
+    module = ModuleSummary(
+        path="example.py",
+        dunder_all=["PublicClass", "public_func"],
+        classes=[
+            ClassSummary(name="PublicClass"),
+            ClassSummary(name="InternalClass"),
+        ],
+        functions=[
+            FunctionSummary(name="public_func", signature="() -> None"),
+            FunctionSummary(name="helper", signature="() -> None"),
+        ],
+        constants=[
+            ConstantSummary(name="EXPORTED", value="1"),
+            ConstantSummary(name="INTERNAL", value="2"),
+        ],
+    )
+    output = render_module(module, public_only=True)
+    assert "PublicClass" in output
+    assert "InternalClass" not in output
+    assert "public_func" in output
+    assert "helper" not in output
+    assert "EXPORTED" not in output
+    assert "INTERNAL" not in output
+
+
+def test_render_public_only_no_dunder_all_shows_everything():
+    """When public_only=True but no __all__, everything is shown (no filtering)."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(name="func_a", signature="() -> None"),
+            FunctionSummary(name="func_b", signature="() -> None"),
+        ],
+    )
+    output = render_module(module, public_only=True)
+    assert "func_a" in output
+    assert "func_b" in output
+
+
+def test_render_public_only_empty_dunder_all():
+    """When __all__ = [], nothing should be rendered (header only)."""
+    module = ModuleSummary(
+        path="example.py",
+        dunder_all=[],
+        functions=[
+            FunctionSummary(name="func_a", signature="() -> None"),
+        ],
+    )
+    output = render_module(module, public_only=True)
+    assert "func_a" not in output
+    assert output.strip() == "# example.py"
+
+
+def test_render_public_only_with_no_private_combined():
+    """--public-only and --no-private can be combined."""
+    module = ModuleSummary(
+        path="example.py",
+        dunder_all=["public_func", "_special"],
+        functions=[
+            FunctionSummary(name="public_func", signature="() -> None"),
+            FunctionSummary(name="_special", signature="() -> None"),
+            FunctionSummary(name="not_exported", signature="() -> None"),
+        ],
+    )
+    # public_only keeps public_func and _special; no_private then drops _special
+    output = render_module(module, public_only=True, no_private=True)
+    assert "public_func" in output
+    assert "_special" not in output
+    assert "not_exported" not in output
+
+
+def test_render_public_only_class_methods_not_filtered():
+    """Methods inside an included class should not be filtered by __all__."""
+    module = ModuleSummary(
+        path="example.py",
+        dunder_all=["MyClass"],
+        classes=[
+            ClassSummary(
+                name="MyClass",
+                methods=[
+                    FunctionSummary(name="__init__", signature="(self)"),
+                    FunctionSummary(name="method_a", signature="(self) -> None"),
+                ],
+            ),
+        ],
+        functions=[
+            FunctionSummary(name="not_exported", signature="() -> None"),
+        ],
+    )
+    output = render_module(module, public_only=True)
+    assert "MyClass" in output
+    assert "__init__" in output
+    assert "method_a" in output
+    assert "not_exported" not in output
+
+
+def test_render_public_only_includes_type_aliases():
+    """Type aliases listed in __all__ should be included."""
+    module = ModuleSummary(
+        path="example.py",
+        dunder_all=["UserId", "public_func"],
+        type_aliases=[
+            TypeAliasSummary(name="UserId", value="int"),
+            TypeAliasSummary(name="InternalId", value="str"),
+        ],
+        functions=[
+            FunctionSummary(name="public_func", signature="() -> None"),
+        ],
+    )
+    output = render_module(module, public_only=True)
+    assert "UserId" in output
+    assert "InternalId" not in output
+    assert "public_func" in output
+
+
+def test_render_public_only_includes_constants():
+    """Constants listed in __all__ should be included."""
+    module = ModuleSummary(
+        path="example.py",
+        dunder_all=["MAX_RETRIES"],
+        constants=[
+            ConstantSummary(name="MAX_RETRIES", value="3"),
+            ConstantSummary(name="INTERNAL_LIMIT", value="100"),
+        ],
+    )
+    output = render_module(module, public_only=True)
+    assert "MAX_RETRIES" in output
+    assert "INTERNAL_LIMIT" not in output
+
+
+def test_render_project_public_only():
+    """render_project passes public_only through to render_module."""
+    modules = [
+        ModuleSummary(
+            path="a.py",
+            dunder_all=["exported"],
+            functions=[
+                FunctionSummary(name="exported", signature="() -> None"),
+                FunctionSummary(name="internal", signature="() -> None"),
+            ],
+        ),
+        ModuleSummary(
+            path="b.py",
+            functions=[
+                FunctionSummary(name="everything", signature="() -> None"),
+            ],
+        ),
+    ]
+    output = render_project(modules, public_only=True)
+    assert "exported" in output
+    assert "internal" not in output
+    assert "everything" in output

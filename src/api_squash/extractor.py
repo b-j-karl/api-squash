@@ -60,6 +60,7 @@ def extract_file(path: Path) -> ModuleSummary:
         functions=functions,
         constants=constants,
         type_aliases=type_aliases,
+        dunder_all=_extract_dunder_all(tree),
     )
 
 
@@ -224,3 +225,51 @@ def _extract_pep695_type_alias(node: ast.TypeAlias) -> TypeAliasSummary:
         type_params=type_params,
         is_type_statement=True,
     )
+
+
+def _extract_dunder_all(tree: ast.Module) -> list[str] | None:
+    """Extract ``__all__`` from a module AST if it's a static list/tuple of strings.
+
+    Handles both plain assignment (``__all__ = [...]``) and annotated assignment
+    (``__all__: list[str] = [...]``).  When a module contains multiple
+    ``__all__`` assignments, the last one wins (matching Python runtime
+    semantics).  A dynamic override after a static one is treated as
+    unresolvable (returns ``None``).
+    """
+    result: list[str] | None = None
+
+    for node in ast.iter_child_nodes(tree):
+        target_name: str | None = None
+        value: ast.expr | None = None
+
+        if isinstance(node, ast.Assign):
+            if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+                continue
+            target_name = node.targets[0].id
+            value = node.value
+        elif isinstance(node, ast.AnnAssign):
+            if not isinstance(node.target, ast.Name) or node.value is None:
+                continue
+            target_name = node.target.id
+            value = node.value
+        else:
+            continue
+
+        if target_name != "__all__":
+            continue
+
+        if not isinstance(value, (ast.List, ast.Tuple)):
+            result = None
+            continue
+
+        names: list[str] = []
+        all_strings = True
+        for elt in value.elts:
+            if not isinstance(elt, ast.Constant) or not isinstance(elt.value, str):
+                all_strings = False
+                break
+            names.append(elt.value)
+
+        result = names if all_strings else None
+
+    return result
