@@ -123,6 +123,23 @@ class AcmeClient:
   async def list_users(self, *, active: bool = True) -> list[dict]
 ```
 
+## Benchmarks
+
+Measured against real-world Python packages — not estimates. Default flags,
+no docstring or private stripping.
+
+<!-- bench-start -->
+| Package | Source files | Source lines | Output lines | Compression | ≈ Tokens |
+|---|---|---|---|---|---|
+| click 8.3.2 | 17 | 11,136 | 3,262 | 71% | 36,961 |
+| requests 2.33.1 | 18 | 5,626 | 1,527 | 73% | 14,606 |
+| flask 3.1.3 | 24 | 9,199 | 3,595 | 61% | 38,586 |
+| django 6.0.4 | 899 | 161,043 | 31,308 | 81% | 279,987 |
+| fastapi 0.135.3 | 48 | 19,350 | 1,977 | 90% | 97,730 |
+<!-- bench-end -->
+
+*Reproduce with `uv run python scripts/benchmark.py`.*
+
 ## CLI Reference
 
 ### `api-squash file`
