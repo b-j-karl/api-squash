@@ -11,6 +11,7 @@ from .scanner import scan_directory
 
 
 @click.group()
+@click.version_option(package_name="api-squash", prog_name="api-squash")
 def cli() -> None:
     """Extract Python API surfaces in a compact, token-efficient format."""
 
@@ -19,9 +20,34 @@ def cli() -> None:
 @click.argument("path", type=click.Path(exists=True))
 @click.option("--no-docstrings", is_flag=True, help="Strip all docstrings")
 @click.option(
-    "--no-private", is_flag=True, help="Skip private methods (except __init__)"
+    "--no-private",
+    is_flag=True,
+    help="Skip private classes/methods (except __init__); keeps items referenced by public signatures",
 )
-def file(path: str, no_docstrings: bool, no_private: bool) -> None:
+@click.option(
+    "--no-constants",
+    is_flag=True,
+    help="Exclude module-level UPPER_CASE constants from output",
+)
+@click.option(
+    "--wrap",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Wrap long signatures at this width (one param per line)",
+)
+@click.option(
+    "--public-only",
+    is_flag=True,
+    help="Only include names listed in __all__ (modules without __all__ are unaffected)",
+)
+def file(
+    path: str,
+    no_docstrings: bool,
+    no_private: bool,
+    no_constants: bool,
+    wrap: int | None,
+    public_only: bool,
+) -> None:
     """Summarize a single Python file."""
     file_path = Path(path)
     if file_path.suffix != ".py":
@@ -36,7 +62,14 @@ def file(path: str, no_docstrings: bool, no_private: bool) -> None:
 
     module.path = Path(path).as_posix()
 
-    output = render_module(module, no_docstrings=no_docstrings, no_private=no_private)
+    output = render_module(
+        module,
+        no_docstrings=no_docstrings,
+        no_private=no_private,
+        no_constants=no_constants,
+        public_only=public_only,
+        wrap=wrap,
+    )
     click.echo(output, nl=False)
 
 
@@ -48,7 +81,25 @@ def file(path: str, no_docstrings: bool, no_private: bool) -> None:
 @click.option("--exclude", multiple=True, help="Glob patterns to exclude")
 @click.option("--no-docstrings", is_flag=True, help="Strip all docstrings")
 @click.option(
-    "--no-private", is_flag=True, help="Skip private methods (except __init__)"
+    "--no-private",
+    is_flag=True,
+    help="Skip private classes/methods (except __init__); keeps items referenced by public signatures",
+)
+@click.option(
+    "--no-constants",
+    is_flag=True,
+    help="Exclude module-level UPPER_CASE constants from output",
+)
+@click.option(
+    "--wrap",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Wrap long signatures at this width (one param per line)",
+)
+@click.option(
+    "--public-only",
+    is_flag=True,
+    help="Only include names listed in __all__ (modules without __all__ are unaffected)",
 )
 def project(
     path: str,
@@ -56,6 +107,9 @@ def project(
     exclude: tuple[str, ...],
     no_docstrings: bool,
     no_private: bool,
+    no_constants: bool,
+    wrap: int | None,
+    public_only: bool,
 ) -> None:
     """Summarize all Python files in a directory."""
     root = Path(path)
@@ -76,5 +130,12 @@ def project(
         except Exception as e:
             click.echo(f"Warning: Skipping {file_path}: {e}", err=True)
 
-    output = render_project(modules, no_docstrings=no_docstrings, no_private=no_private)
+    output = render_project(
+        modules,
+        no_docstrings=no_docstrings,
+        no_private=no_private,
+        no_constants=no_constants,
+        public_only=public_only,
+        wrap=wrap,
+    )
     click.echo(output, nl=False)

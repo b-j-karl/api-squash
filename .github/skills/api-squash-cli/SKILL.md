@@ -1,15 +1,19 @@
 ---
 name: api-squash-cli
 description: >-
-  Extract Python API surfaces in a compact, token-efficient Markdown format.
-  Parses Python source files using the AST and produces concise summaries
-  containing only classes, functions, and their signatures. Supports
-  single-file and whole-project summarisation with options to strip docstrings,
-  exclude private methods, limit recursion depth, and exclude paths by glob
-  pattern.
-license: MIT License
+  Extract and summarise Python API surfaces using api-squash. Use when the user
+  asks to summarise a Python project's API, understand a codebase's class or
+  function structure, list public interfaces, inspect module signatures, or
+  before code-generation tasks that need structural awareness — even if they
+  don't say 'api-squash' explicitly. Also use when the user says 'what does
+  this project expose?', 'show me the API surface', or asks to generate code
+  that must conform to an existing Python interface. Do NOT use for non-Python
+  projects or for reading full source code.
+compatibility:
+  platform: universal
 metadata:
-  skill-author: b-j-karl
+  author: b-j-karl
+  version: "1.0"
 ---
 
 # api-squash
@@ -18,7 +22,7 @@ Extract Python API surfaces in a compact, token-efficient Markdown format using
 AST parsing. Produces summaries containing only classes, functions, and their
 signatures — no implementation details, no function bodies.
 
-## When to use
+## Use for
 
 - Summarising a Python module or project's public API
 - Understanding codebase structure before generating code, writing tests, or
@@ -27,7 +31,7 @@ signatures — no implementation details, no function bodies.
 - Answering questions like "what classes/functions does this project expose?"
 - Preparing context for code-generation agents that need interface awareness
 
-## When not to use
+## Do not use for
 
 - Non-Python projects
 - Reading full source code or implementation details
@@ -85,7 +89,7 @@ api-squash project [OPTIONS] PATH
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
 
-Common directories(`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
+Common directories (`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
 `dist`) are excluded automatically.
 
 **Examples:**

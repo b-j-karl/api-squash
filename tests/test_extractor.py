@@ -1,3 +1,8 @@
+import sys
+import warnings
+
+import pytest
+
 from api_squash.extractor import extract_file
 
 
@@ -185,3 +190,441 @@ def test_file_with_only_imports(tmp_path):
 
     assert result.functions == []
     assert result.classes == []
+
+
+def test_property_decorator(tmp_path):
+    source = (
+        "class Raster:\n"
+        "    @property\n"
+        "    def crs(self) -> str:\n"
+        "        return self._crs\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["property"]
+
+
+def test_classmethod_decorator(tmp_path):
+    source = (
+        "class Factory:\n"
+        "    @classmethod\n"
+        "    def create(cls) -> 'Factory':\n"
+        "        return cls()\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["classmethod"]
+
+
+def test_staticmethod_decorator(tmp_path):
+    source = (
+        "class Utils:\n"
+        "    @staticmethod\n"
+        "    def helper(x: int) -> int:\n"
+        "        return x + 1\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["staticmethod"]
+
+
+def test_overload_decorator(tmp_path):
+    source = (
+        "from typing import overload\n"
+        "class Parser:\n"
+        "    @overload\n"
+        "    def parse(self, data: str) -> dict: ...\n"
+        "    @overload\n"
+        "    def parse(self, data: bytes) -> dict: ...\n"
+        "    def parse(self, data):\n"
+        "        pass\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    methods = result.classes[0].methods
+    assert methods[0].decorators == ["overload"]
+    assert methods[1].decorators == ["overload"]
+    assert methods[2].decorators == []
+
+
+def test_unrecognised_decorator_ignored(tmp_path):
+    source = (
+        "import functools\n"
+        "class Cached:\n"
+        "    @functools.lru_cache\n"
+        "    def compute(self, x: int) -> int:\n"
+        "        return x * 2\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == []
+
+
+def test_multiple_decorators(tmp_path):
+    source = (
+        "from typing import overload\n"
+        "class Multi:\n"
+        "    @staticmethod\n"
+        "    @overload\n"
+        "    def do(x: int) -> int: ...\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    method = result.classes[0].methods[0]
+    assert method.decorators == ["staticmethod", "overload"]
+
+
+def test_invalid_escape_no_syntax_warning(tmp_path):
+    source = "import re\npattern = re.compile('\\p{L}')\n"
+    p = tmp_path / "bad_escape.py"
+    p.write_text(source, encoding="utf-8")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = extract_file(p)
+
+    syntax_warnings = [w for w in caught if issubclass(w.category, SyntaxWarning)]
+    assert syntax_warnings == [], f"SyntaxWarning(s) leaked: {syntax_warnings}"
+    assert result.functions == []
+
+
+# --- Tests for constant extraction (#20) ---
+
+
+def test_extract_upper_case_assign(tmp_path):
+    source = "MAX_RETRIES = 3\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "MAX_RETRIES"
+    assert const.type_annotation is None
+    assert const.value == "3"
+
+
+def test_extract_annotated_assign(tmp_path):
+    source = "TIMEOUT: int = 30\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "TIMEOUT"
+    assert const.type_annotation == "int"
+    assert const.value == "30"
+
+
+def test_extract_annotation_only(tmp_path):
+    source = "BUFFER_SIZE: int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "BUFFER_SIZE"
+    assert const.type_annotation == "int"
+    assert const.value is None
+
+
+def test_extract_skips_lower_case(tmp_path):
+    source = "my_variable = 42\nanother: str = 'hello'\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []
+
+
+def test_extract_skips_multi_target_assign(tmp_path):
+    source = "A = B = 10\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []
+
+
+def test_extract_skips_tuple_unpack(tmp_path):
+    source = "X, Y = 1, 2\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []
+
+
+def test_extract_complex_value(tmp_path):
+    source = "DEFAULT_EXCLUDES: set[str] = {'__pycache__', '.git'}\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 1
+    const = result.constants[0]
+    assert const.name == "DEFAULT_EXCLUDES"
+    assert const.type_annotation == "set[str]"
+    assert const.value is not None
+
+
+def test_extract_multiple_constants(tmp_path):
+    source = "MAX_RETRIES = 3\nTIMEOUT: int = 30\ndef func(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.constants) == 2
+    assert len(result.functions) == 1
+
+
+def test_extract_mixed_case_skipped(tmp_path):
+    """Names like 'MyClass' or 'maxRetries' are not UPPER_CASE constants."""
+    source = "MyClass = type('MyClass', (), {})\nmaxRetries = 5\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.constants == []
+
+
+# --- Tests for type alias extraction (#21) ---
+
+
+def test_extract_pep613_type_alias(tmp_path):
+    """TypeAlias annotation (PEP 613) should be extracted."""
+    source = "from typing import TypeAlias\n\nPathLike: TypeAlias = str | Path\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    alias = result.type_aliases[0]
+    assert alias.name == "PathLike"
+    assert alias.value == "str | Path"
+
+
+# PEP 695 `type` statements are a syntax error on Python <3.12,
+# so both ast.parse() and ast.TypeAlias are unavailable.
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 requires Python 3.12+")
+def test_extract_pep695_type_statement(tmp_path):
+    """PEP 695 type statement (Python 3.12+) should be extracted."""
+    source = "type Vector = list[float]\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    alias = result.type_aliases[0]
+    assert alias.name == "Vector"
+    assert alias.value == "list[float]"
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 requires Python 3.12+")
+def test_extract_pep695_type_with_params(tmp_path):
+    """PEP 695 type statement with type parameters."""
+    source = "type Matrix[T] = list[list[T]]\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    alias = result.type_aliases[0]
+    assert alias.name == "Matrix"
+    assert alias.value == "list[list[T]]"
+    assert alias.type_params == ["T"]
+
+
+def test_extract_pep613_typing_extensions(tmp_path):
+    """typing_extensions.TypeAlias should also be recognised."""
+    source = "from typing_extensions import TypeAlias\n\nUserId: TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.type_aliases[0].name == "UserId"
+    assert result.type_aliases[0].value == "int"
+
+
+def test_extract_type_alias_not_confused_with_constant(tmp_path):
+    """A TypeAlias should not also appear as a constant."""
+    source = "from typing import TypeAlias\n\nMY_TYPE: TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.constants == []
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 requires Python 3.12+")
+def test_extract_multiple_type_aliases(tmp_path):
+    source = (
+        "from typing import TypeAlias\n\n"
+        "UserId: TypeAlias = int\n"
+        "type Coord = tuple[float, float]\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 2
+    names = [a.name for a in result.type_aliases]
+    assert "UserId" in names
+    assert "Coord" in names
+
+
+def test_extract_pep613_qualified_typing(tmp_path):
+    """typing.TypeAlias (qualified) should be recognised."""
+    source = "import typing\n\nUserId: typing.TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.type_aliases[0].name == "UserId"
+    assert result.type_aliases[0].value == "int"
+
+
+def test_extract_pep613_qualified_typing_extensions(tmp_path):
+    """typing_extensions.TypeAlias (qualified) should be recognised."""
+    source = "import typing_extensions\n\nUserId: typing_extensions.TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.type_aliases[0].name == "UserId"
+    assert result.type_aliases[0].value == "int"
+
+
+def test_extract_plain_annotation_not_type_alias(tmp_path):
+    """A regular annotated assignment should NOT be treated as a type alias."""
+    source = "MY_VAR: int = 42\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.type_aliases == []
+
+
+# --- Tests for __all__ extraction (#19) ---
+
+
+def test_extract_dunder_all_list(tmp_path):
+    """__all__ as a list of strings should be extracted."""
+    source = '__all__ = ["Foo", "bar"]\ndef Foo(): pass\ndef bar(): pass\ndef _internal(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo", "bar"]
+
+
+def test_extract_dunder_all_tuple(tmp_path):
+    """__all__ as a tuple of strings should be extracted."""
+    source = '__all__ = ("Foo",)\ndef Foo(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo"]
+
+
+def test_extract_dunder_all_empty(tmp_path):
+    """An empty __all__ should yield an empty list (not None)."""
+    source = "__all__ = []\ndef Foo(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == []
+
+
+def test_extract_dunder_all_not_defined(tmp_path):
+    """Module without __all__ should have dunder_all=None."""
+    source = "def Foo(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None
+
+
+def test_extract_dunder_all_dynamic_ignored(tmp_path):
+    """Dynamic __all__ (e.g. dir()) can't be resolved, treated as absent."""
+    source = "__all__ = dir()\ndef Foo(): pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None
+
+
+def test_extract_dunder_all_non_string_ignored(tmp_path):
+    """__all__ with non-string elements can't be resolved, treated as absent."""
+    source = "__all__ = [Foo, 1]\nclass Foo: pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None
+
+
+def test_extract_dunder_all_annotated_assignment(tmp_path):
+    """__all__: list[str] = [...] (annotated assignment) should be extracted."""
+    source = '__all__: list[str] = ["Foo", "bar"]\ndef Foo(): pass\ndef bar(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo", "bar"]
+
+
+def test_extract_dunder_all_last_assignment_wins(tmp_path):
+    """When multiple __all__ assignments exist, the last one wins."""
+    source = '__all__ = ["first"]\n__all__ = ["second", "third"]\ndef second(): pass\ndef third(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["second", "third"]
+
+
+def test_extract_dunder_all_dynamic_overrides_static(tmp_path):
+    """A dynamic __all__ after a static one makes it unresolvable."""
+    source = '__all__ = ["Foo"]\n__all__ = dir()\ndef Foo(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None
+
+
+def test_extract_dunder_all_static_overrides_dynamic(tmp_path):
+    """A static __all__ after a dynamic one should be extracted."""
+    source = '__all__ = dir()\n__all__ = ["Foo"]\ndef Foo(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo"]

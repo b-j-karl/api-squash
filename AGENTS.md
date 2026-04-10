@@ -25,3 +25,5 @@
 - Output uses forward slashes in file path headers regardless of OS
 - All file I/O uses `encoding="utf-8"` explicitly
 - Frequent, atomic commits with conventional commit messages
+- New output features default to ON; use `--no-X` opt-out flags (not `--include-X` opt-in)
+- Always create a dedicated feature branch (e.g. `feat/description`) before implementing an issue

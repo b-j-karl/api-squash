@@ -7,6 +7,7 @@ def test_function_summary_defaults():
     assert func.signature == "(name: str) -> str"
     assert func.docstring is None
     assert func.is_async is False
+    assert func.decorators == []
 
 
 def test_function_summary_all_fields():
@@ -15,10 +16,12 @@ def test_function_summary_all_fields():
         signature="(url: str) -> bytes",
         docstring="Fetch URL content.",
         is_async=True,
+        decorators=["staticmethod", "overload"],
     )
     assert func.name == "fetch"
     assert func.docstring == "Fetch URL content."
     assert func.is_async is True
+    assert func.decorators == ["staticmethod", "overload"]
 
 
 def test_class_summary_defaults():

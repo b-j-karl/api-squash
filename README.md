@@ -7,7 +7,7 @@
 [![PyPI](https://img.shields.io/pypi/v/api-squash)](https://pypi.org/project/api-squash/)
 [![Downloads](https://img.shields.io/pypi/dm/api-squash)](https://pypi.org/project/api-squash/)
 [![CI](https://github.com/b-j-karl/api-squash/actions/workflows/ci.yml/badge.svg)](https://github.com/b-j-karl/api-squash/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/b-j-karl/api-squash/graph/badge.svg)](https://codecov.io/gh/b-j-karl/api-squash)
+[![codecov](https://codecov.io/gh/b-j-karl/api-squash/branch/develop/graph/badge.svg)](https://codecov.io/gh/b-j-karl/api-squash)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -137,11 +137,11 @@ class AcmeClient:
 <!-- bench-start -->
 | Package | Source files | Source lines | Output lines | Compression | ≈ Tokens |
 |---|---|---|---|---|---|
-| click 8.3.2 | 17 | 11,136 | 3,166 | 72% | 36,576 |
-| requests 2.33.1 | 18 | 5,626 | 1,489 | 74% | 14,348 |
-| flask 3.1.3 | 24 | 9,199 | 3,564 | 61% | 38,469 |
-| django 6.0.4 | 899 | 161,043 | 28,985 | 82% | 255,550 |
-| fastapi 0.135.3 | 48 | 19,350 | 1,958 | 90% | 97,486 |
+| click 8.3.2 | 17 | 11,136 | 3,262 | 71% | 36,961 |
+| requests 2.33.1 | 18 | 5,626 | 1,527 | 73% | 14,606 |
+| flask 3.1.3 | 24 | 9,199 | 3,595 | 61% | 38,586 |
+| django 6.0.4 | 899 | 161,043 | 31,308 | 81% | 279,987 |
+| fastapi 0.135.3 | 48 | 19,350 | 1,977 | 90% | 97,730 |
 <!-- bench-end -->
 
 *Reproduce with `uv run python scripts/benchmark.py`.*
