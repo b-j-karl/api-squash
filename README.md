@@ -1,27 +1,40 @@
+<div align="center">
+
 # api-squash
 
-> Extract Python API surfaces in a compact, token-efficient format.
+**The API surface of any Python project, in one command.**
 
+[![PyPI](https://img.shields.io/pypi/v/api-squash)](https://pypi.org/project/api-squash/)
+[![Downloads](https://img.shields.io/pypi/dm/api-squash)](https://pypi.org/project/api-squash/)
 [![CI](https://github.com/b-j-karl/api-squash/actions/workflows/ci.yml/badge.svg)](https://github.com/b-j-karl/api-squash/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/b-j-karl/api-squash/graph/badge.svg)](https://codecov.io/gh/b-j-karl/api-squash)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## Overview
+</div>
 
-Agentic AI workflows need to understand a codebase's API surface without
-burning context on implementation details. Pasting entire source files into a
-prompt wastes tokens on function bodies, comments, and boilerplate that the
-agent doesn't need.
+## The Problem
 
-**api-squash** parses Python source files using the AST and produces concise
-Markdown summaries containing only the public API surface — classes, functions,
-and their signatures — so AI agents can ingest a full project's interface in a
+AI coding assistants need to understand your codebase's structure, but pasting
+full source files into a prompt wastes most of your context window on function
+bodies, comments, and boilerplate the agent doesn't need.
+
+For a package like `requests`, that's **5,600 lines of source** to convey what
+**1,500 lines of signatures** could say.
+
+api-squash parses Python source with the AST and produces compact Markdown
+containing only the public API surface — classes, functions, signatures, and
+type annotations — so AI agents can ingest a full project's interface in a
 fraction of the tokens.
 
-Built for agentic AI workflows: code-generation agents, autonomous refactoring
-pipelines, and any system where an LLM needs to reason about code structure
-programmatically.
+## Features
+
+- **AST-based, not regex** — correctly handles type annotations, generics, `@overload`, decorators, nested classes
+- **60–90% token savings** — measured across real packages from requests to Django
+- **Zero config** — auto-excludes `__pycache__`, `.venv`, `node_modules`, `build`
+- **Single dependency** — just Click; installs in seconds
+- **AI-agent ready** — ships with skills for GitHub Copilot CLI and Claude Code
+- **Tunable output** — `--no-docstrings`, `--no-private`, `--no-constants`, `--wrap` for full control over verbosity
 
 ## Installation
 
@@ -29,11 +42,10 @@ programmatically.
 pip install api-squash
 ```
 
-For development:
+Or run without installing via [uvx](https://docs.astral.sh/uv/guides/tools/):
 
 ```bash
-# Requires the uv package manager (https://docs.astral.sh/uv/)
-uv sync
+uvx api-squash --help
 ```
 
 ## Quick Start
@@ -50,7 +62,7 @@ Summarize an entire project:
 api-squash project path/to/project/
 ```
 
-### Example
+### Before & After
 
 Given a file `example_api.py`:
 
@@ -117,6 +129,38 @@ class AcmeClient:
   async def list_users(self, *, active: bool = True) -> list[dict]
 ```
 
+## Benchmarks
+
+<div align="center">
+<img src="docs/benchmark-chart.svg" alt="Benchmark chart showing 61-90% compression across real Python packages" width="680">
+</div>
+
+<!-- bench-start -->
+| Package | Source files | Source lines | Output lines | Compression | ≈ Tokens |
+|---|---|---|---|---|---|
+| click 8.3.2 | 17 | 11,136 | 3,262 | 71% | 36,961 |
+| requests 2.33.1 | 18 | 5,626 | 1,527 | 73% | 14,606 |
+| flask 3.1.3 | 24 | 9,199 | 3,595 | 61% | 38,586 |
+| django 6.0.4 | 899 | 161,043 | 31,308 | 81% | 279,987 |
+| fastapi 0.135.3 | 48 | 19,350 | 1,977 | 90% | 97,730 |
+<!-- bench-end -->
+
+*Reproduce with `uv run python scripts/benchmark.py`.*
+
+> **Tip — large codebases:** If the project has more than ~30 source files,
+> start with `--max-depth 1 --no-docstrings` to get a high-level overview,
+> then drill into specific subpackages as needed.
+
+## Why api-squash?
+
+| Approach | Limitation |
+|---|---|
+| Paste full source files | 80–90% of tokens wasted on function bodies |
+| `grep -r "def "` | Misses signatures, types, class structure |
+| IDE "outline" view | Not scriptable, can't feed to an LLM |
+| tree-sitter queries | Requires writing custom queries per language |
+| **api-squash** | **One command, full API map, token-efficient output** |
+
 ## CLI Reference
 
 ### `api-squash file`
@@ -130,7 +174,9 @@ Usage: api-squash file [OPTIONS] PATH
 | Option | Description |
 |---|---|
 | `--no-docstrings` | Strip all docstrings from the output |
-| `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
+| `--no-constants` | Exclude module-level UPPER_CASE constants |
+| `--wrap INTEGER` | Wrap long signature lines at the given column width |
 
 ### `api-squash project`
 
@@ -143,51 +189,36 @@ Usage: api-squash project [OPTIONS] PATH
 | Option | Description |
 |---|---|
 | `--max-depth INTEGER` | Limit directory recursion depth |
-| `--exclude TEXT` | Glob patterns to exclude (can be repeated) |
+| `--exclude TEXT` | Glob patterns to exclude (repeatable) |
 | `--no-docstrings` | Strip all docstrings from the output |
-| `--no-private` | Skip private methods (names starting with `_`), except `__init__` |
+| `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
+| `--no-constants` | Exclude module-level UPPER_CASE constants |
+| `--wrap INTEGER` | Wrap long signature lines at the given column width |
 
 Common directories like `__pycache__`, `.venv`, `.git`, `node_modules`,
 `build`, and `dist` are skipped automatically.
 
-## Output Format
+## AI Agent Integration
 
-api-squash produces Markdown-style output designed for easy reading and
-token-efficient LLM consumption:
+api-squash ships with skills for **GitHub Copilot CLI** and **Claude Code**.
+Clone the repo and your AI assistant automatically discovers how to use it.
 
-- **File headers** — each module starts with `# path/to/file.py`
-- **Classes** — rendered as `class Name(Base):` with docstrings indented below
-- **Functions / methods** — rendered as `def name(signature) -> return_type`
-  with docstrings indented below
-- **Separators** — in project mode, modules are separated by `---`
+The `python-code-context` skill teaches agents to run api-squash before coding
+tasks — loading structural context automatically instead of reading files one
+by one.
 
-## Development
+See [`docs/skills/`](docs/skills/) for skill documentation.
 
-**Prerequisites:** Python ≥ 3.10, [uv](https://docs.astral.sh/uv/)
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the branching strategy and
+development workflow.
 
 ```bash
-# Install dependencies
-uv sync
-
-# Run tests
-uv run pytest -v
-
-# Lint
-uv run ruff check src/ tests/
-
-# Format
-uv run ruff format src/ tests/
-```
-
-## Project Structure
-
-```
-src/api_squash/
-├── cli.py          # Click CLI entry points
-├── extractor.py    # AST-based API extraction
-├── models.py       # Data models (ModuleSummary, ClassSummary, FunctionSummary)
-├── renderer.py     # Markdown output rendering
-└── scanner.py      # Directory scanning with exclusion patterns
+uv sync               # install dependencies
+uv run pytest -v       # run tests
+uv run ruff check .    # lint
+uv run ruff format .   # format
 ```
 
 ## License

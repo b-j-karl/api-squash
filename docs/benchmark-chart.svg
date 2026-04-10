@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 330" role="img" aria-label="Token count comparison: raw source vs default compression vs maximum compression for five Python packages">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
+    .pkg { font-size: 13px; fill: #24292f; font-weight: 600; }
+    .val { font-size: 11px; fill: #24292f; }
+    .bar-source { fill: #d1d5db; }
+    .bar-default { fill: #3b82f6; }
+    .bar-max { fill: #10b981; }
+    .legend-text { font-size: 11px; fill: #57606a; }
+    .note { font-size: 11px; fill: #57606a; font-style: italic; }
+    @media (prefers-color-scheme: dark) {
+      .pkg { fill: #e6edf3; }
+      .val { fill: #e6edf3; }
+      .bar-source { fill: #4b5563; }
+      .bar-default { fill: #58a6ff; }
+      .bar-max { fill: #3fb950; }
+      .legend-text { fill: #8b949e; }
+      .note { fill: #8b949e; }
+    }
+  </style>
+
+  <!-- Legend -->
+  <rect x="140" y="6" width="12" height="12" rx="2" class="bar-source"/>
+  <text x="156" y="16" class="legend-text">Raw source</text>
+  <rect x="240" y="6" width="12" height="12" rx="2" class="bar-default"/>
+  <text x="256" y="16" class="legend-text">Default flags</text>
+  <rect x="356" y="6" width="12" height="12" rx="2" class="bar-max"/>
+  <text x="372" y="16" class="legend-text">--no-docstrings --no-private</text>
+
+  <!-- click — 96k / 37k / 9k -->
+  <text x="130" y="62" text-anchor="end" class="pkg">click</text>
+  <rect x="140" y="36" width="380" height="14" rx="3" class="bar-source"/>
+  <text x="526" y="47" class="val">96k</text>
+  <rect x="140" y="52" width="145" height="14" rx="3" class="bar-default"/>
+  <text x="291" y="63" class="val">37k</text>
+  <rect x="140" y="68" width="34" height="14" rx="3" class="bar-max"/>
+  <text x="180" y="79" class="val">9k</text>
+
+  <!-- requests — 47k / 14k / 2k -->
+  <text x="130" y="118" text-anchor="end" class="pkg">requests</text>
+  <rect x="140" y="92" width="380" height="14" rx="3" class="bar-source"/>
+  <text x="526" y="103" class="val">47k</text>
+  <rect x="140" y="108" width="117" height="14" rx="3" class="bar-default"/>
+  <text x="263" y="119" class="val">14k</text>
+  <rect x="140" y="124" width="19" height="14" rx="3" class="bar-max"/>
+  <text x="165" y="135" class="val">2k</text>
+
+  <!-- flask — 84k / 38k / 6k -->
+  <text x="130" y="174" text-anchor="end" class="pkg">flask</text>
+  <rect x="140" y="148" width="380" height="14" rx="3" class="bar-source"/>
+  <text x="526" y="159" class="val">84k</text>
+  <rect x="140" y="164" width="173" height="14" rx="3" class="bar-default"/>
+  <text x="319" y="175" class="val">38k</text>
+  <rect x="140" y="180" width="27" height="14" rx="3" class="bar-max"/>
+  <text x="173" y="191" class="val">6k</text>
+
+  <!-- django — 1.4M / 256k / 101k -->
+  <text x="130" y="230" text-anchor="end" class="pkg">django</text>
+  <rect x="140" y="204" width="380" height="14" rx="3" class="bar-source"/>
+  <text x="526" y="215" class="val">1.4M</text>
+  <rect x="140" y="220" width="68" height="14" rx="3" class="bar-default"/>
+  <text x="214" y="231" class="val">256k</text>
+  <rect x="140" y="236" width="27" height="14" rx="3" class="bar-max"/>
+  <text x="173" y="247" class="val">101k</text>
+
+  <!-- fastapi — 175k / 97k / 87k -->
+  <text x="130" y="286" text-anchor="end" class="pkg">fastapi</text>
+  <rect x="140" y="260" width="380" height="14" rx="3" class="bar-source"/>
+  <text x="526" y="271" class="val">175k</text>
+  <rect x="140" y="276" width="211" height="14" rx="3" class="bar-default"/>
+  <text x="357" y="287" class="val">97k</text>
+  <rect x="140" y="292" width="188" height="14" rx="3" class="bar-max"/>
+  <text x="334" y="303" class="val">87k</text>
+
+  <!-- Footer -->
+  <text x="140" y="325" class="note">Approximate tokens (chars / 4). Measured on real installed packages.</text>
+</svg>
