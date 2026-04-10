@@ -588,3 +588,43 @@ def test_extract_dunder_all_non_string_ignored(tmp_path):
     result = extract_file(p)
 
     assert result.dunder_all is None
+
+
+def test_extract_dunder_all_annotated_assignment(tmp_path):
+    """__all__: list[str] = [...] (annotated assignment) should be extracted."""
+    source = '__all__: list[str] = ["Foo", "bar"]\ndef Foo(): pass\ndef bar(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo", "bar"]
+
+
+def test_extract_dunder_all_last_assignment_wins(tmp_path):
+    """When multiple __all__ assignments exist, the last one wins."""
+    source = '__all__ = ["first"]\n__all__ = ["second", "third"]\ndef second(): pass\ndef third(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["second", "third"]
+
+
+def test_extract_dunder_all_dynamic_overrides_static(tmp_path):
+    """A dynamic __all__ after a static one makes it unresolvable."""
+    source = '__all__ = ["Foo"]\n__all__ = dir()\ndef Foo(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all is None
+
+
+def test_extract_dunder_all_static_overrides_dynamic(tmp_path):
+    """A static __all__ after a dynamic one should be extracted."""
+    source = '__all__ = dir()\n__all__ = ["Foo"]\ndef Foo(): pass\n'
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.dunder_all == ["Foo"]
