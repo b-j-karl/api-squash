@@ -30,7 +30,7 @@ def cli() -> None:
 )
 @click.option(
     "--wrap",
-    type=int,
+    type=click.IntRange(min=1),
     default=None,
     help="Wrap long signatures at this width (one param per line)",
 )
@@ -84,7 +84,7 @@ def file(
 )
 @click.option(
     "--wrap",
-    type=int,
+    type=click.IntRange(min=1),
     default=None,
     help="Wrap long signatures at this width (one param per line)",
 )

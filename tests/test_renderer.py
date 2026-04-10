@@ -1,3 +1,5 @@
+import pytest
+
 from api_squash.models import (
     ClassSummary,
     ConstantSummary,
@@ -757,6 +759,8 @@ def test_wrap_none_does_not_wrap():
         if "def long_func" in line:
             assert "-> None" in line
             break
+    else:
+        pytest.fail("Expected 'def long_func' line not found in output")
 
 
 def test_wrap_with_decorators():
@@ -793,3 +797,29 @@ def test_wrap_project_passes_through():
     ]
     output = render_project(modules, wrap=40)
     assert "def long_func(\n" in output
+
+
+def test_wrap_malformed_signature_no_parens():
+    """Malformed signature without parens falls back to single-line."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[FunctionSummary(name="bad", signature="-> None")],
+    )
+    output = render_module(module, wrap=10)
+    assert "def bad-> None" in output
+
+
+def test_wrap_default_with_comma_in_string():
+    """Commas inside quoted default values should not split params."""
+    module = ModuleSummary(
+        path="example.py",
+        functions=[
+            FunctionSummary(
+                name="fmt",
+                signature="(sep: str = 'a,b', end: str = 'x') -> None",
+            )
+        ],
+    )
+    output = render_module(module, wrap=20)
+    assert "    sep: str = 'a,b'," in output
+    assert "    end: str = 'x'," in output

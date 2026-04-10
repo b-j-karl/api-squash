@@ -140,6 +140,10 @@ def _wrap_signature(func: FunctionSummary, *, indent: int, keyword: str) -> str:
     param_indent = " " * (indent + 4)
 
     sig = func.signature
+    # Guard against malformed signatures without parentheses
+    if "(" not in sig:
+        return f"{prefix}{keyword} {func.name}{sig}"
+
     # Split "(params) -> return" into params and return type
     paren_start = sig.index("(")
     # Find the matching closing paren
@@ -153,6 +157,9 @@ def _wrap_signature(func: FunctionSummary, *, indent: int, keyword: str) -> str:
             if depth == 0:
                 paren_end = i
                 break
+
+    if paren_end == -1:
+        return f"{prefix}{keyword} {func.name}{sig}"
 
     params_str = sig[paren_start + 1 : paren_end]
     return_annotation = sig[paren_end + 1 :]
@@ -168,13 +175,21 @@ def _wrap_signature(func: FunctionSummary, *, indent: int, keyword: str) -> str:
 
 
 def _split_params(params_str: str) -> list[str]:
-    """Split parameter string at top-level commas, respecting bracket nesting."""
+    """Split parameter string at top-level commas, respecting bracket nesting and quotes."""
     params: list[str] = []
     depth = 0
     current: list[str] = []
+    in_quote: str | None = None
 
     for char in params_str:
-        if char in "([{":
+        if in_quote is not None:
+            current.append(char)
+            if char == in_quote:
+                in_quote = None
+        elif char in ("'", '"'):
+            in_quote = char
+            current.append(char)
+        elif char in "([{":
             depth += 1
             current.append(char)
         elif char in ")]}":
