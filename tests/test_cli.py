@@ -159,3 +159,30 @@ def test_project_command_no_constants(tmp_path):
     assert result.exit_code == 0
     assert "DEFAULT_PORT" not in result.output
     assert "def run()" in result.output
+
+
+# --- Tests for --wrap flag (#14) ---
+
+
+def test_file_command_wrap(tmp_path):
+    source = "def long_func(a: int, b: int, c: int, d: int, e: int, f: int) -> None:\n    pass\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["file", str(p), "--wrap", "40"])
+    assert result.exit_code == 0
+    assert "def long_func(\n" in result.output
+    assert ") -> None" in result.output
+
+
+def test_project_command_wrap(tmp_path):
+    (tmp_path / "mod.py").write_text(
+        "def long_func(a: int, b: int, c: int, d: int, e: int) -> None:\n    pass\n",
+        encoding="utf-8",
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["project", str(tmp_path), "--wrap", "40"])
+    assert result.exit_code == 0
+    assert "def long_func(\n" in result.output
