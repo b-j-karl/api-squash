@@ -17,6 +17,11 @@ PRESERVED_DECORATORS = {"property", "classmethod", "staticmethod", "overload"}
 
 _CONSTANT_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
+# ast.TypeAlias was added in Python 3.12 (PEP 695).  On older interpreters we
+# resolve to None so the isinstance check in extract_file() is safely skipped —
+# PEP 695 type statements cannot appear in <3.12 source anyway.
+_AST_TYPE_ALIAS: type | None = getattr(ast, "TypeAlias", None)
+
 
 def extract_file(path: Path) -> ModuleSummary:
     source = path.read_text(encoding="utf-8")
@@ -46,7 +51,7 @@ def extract_file(path: Path) -> ModuleSummary:
             const = _extract_constant(node)
             if const is not None:
                 constants.append(const)
-        elif isinstance(node, ast.TypeAlias):
+        elif _AST_TYPE_ALIAS is not None and isinstance(node, _AST_TYPE_ALIAS):
             type_aliases.append(_extract_pep695_type_alias(node))
 
     return ModuleSummary(

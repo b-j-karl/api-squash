@@ -1,4 +1,7 @@
+import sys
 import warnings
+
+import pytest
 
 from api_squash.extractor import extract_file
 
@@ -419,6 +422,9 @@ def test_extract_pep613_type_alias(tmp_path):
     assert alias.value == "str | Path"
 
 
+# PEP 695 `type` statements are a syntax error on Python <3.12,
+# so both ast.parse() and ast.TypeAlias are unavailable.
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 requires Python 3.12+")
 def test_extract_pep695_type_statement(tmp_path):
     """PEP 695 type statement (Python 3.12+) should be extracted."""
     source = "type Vector = list[float]\n"
@@ -432,6 +438,7 @@ def test_extract_pep695_type_statement(tmp_path):
     assert alias.value == "list[float]"
 
 
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 requires Python 3.12+")
 def test_extract_pep695_type_with_params(tmp_path):
     """PEP 695 type statement with type parameters."""
     source = "type Matrix[T] = list[list[T]]\n"
@@ -469,6 +476,7 @@ def test_extract_type_alias_not_confused_with_constant(tmp_path):
     assert result.constants == []
 
 
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 requires Python 3.12+")
 def test_extract_multiple_type_aliases(tmp_path):
     source = (
         "from typing import TypeAlias\n\n"
