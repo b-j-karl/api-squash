@@ -11,6 +11,7 @@ from .scanner import scan_directory
 
 
 @click.group()
+@click.version_option(package_name="api-squash", prog_name="api-squash")
 def cli() -> None:
     """Extract Python API surfaces in a compact, token-efficient format."""
 
