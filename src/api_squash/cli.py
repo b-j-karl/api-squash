@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from importlib.metadata import version
 from pathlib import Path
 
 import click
@@ -12,7 +11,7 @@ from .scanner import scan_directory
 
 
 @click.group()
-@click.version_option(version=version("api-squash"), prog_name="api-squash")
+@click.version_option(package_name="api-squash", prog_name="api-squash")
 def cli() -> None:
     """Extract Python API surfaces in a compact, token-efficient format."""
 
