@@ -5,6 +5,7 @@ from api_squash.models import (
     ConstantSummary,
     FunctionSummary,
     ModuleSummary,
+    TypeAliasSummary,
 )
 from api_squash.renderer import render_module, render_project
 
@@ -652,6 +653,83 @@ def test_render_multiple_constants_grouped():
     )
     output = render_module(module)
     assert "MAX_RETRIES = 3\nTIMEOUT: int = 30\nBUFFER_SIZE = 1024" in output
+
+
+# --- Tests for type alias rendering (#21) ---
+
+
+def test_render_pep613_type_alias():
+    module = ModuleSummary(
+        path="example.py",
+        type_aliases=[TypeAliasSummary(name="PathLike", value="str | Path")],
+    )
+    output = render_module(module)
+    assert "PathLike = str | Path" in output
+
+
+def test_render_pep695_type_alias():
+    module = ModuleSummary(
+        path="example.py",
+        type_aliases=[
+            TypeAliasSummary(name="Vector", value="list[float]", is_type_statement=True)
+        ],
+    )
+    output = render_module(module)
+    assert "type Vector = list[float]" in output
+
+
+def test_render_pep695_type_alias_with_params():
+    module = ModuleSummary(
+        path="example.py",
+        type_aliases=[
+            TypeAliasSummary(
+                name="Matrix",
+                value="list[list[T]]",
+                type_params=["T"],
+                is_type_statement=True,
+            )
+        ],
+    )
+    output = render_module(module)
+    assert "type Matrix[T] = list[list[T]]" in output
+
+
+def test_render_type_aliases_before_classes():
+    """Type aliases should appear after constants but before classes."""
+    module = ModuleSummary(
+        path="example.py",
+        constants=[ConstantSummary(name="VERSION", value="'1.0'")],
+        type_aliases=[TypeAliasSummary(name="UserId", value="int")],
+        classes=[ClassSummary(name="User")],
+    )
+    output = render_module(module)
+    version_pos = output.index("VERSION")
+    alias_pos = output.index("UserId")
+    class_pos = output.index("class User")
+    assert version_pos < alias_pos < class_pos
+
+
+def test_render_type_alias_not_filtered_by_no_private():
+    """Type aliases should not be filtered by --no-private."""
+    module = ModuleSummary(
+        path="example.py",
+        type_aliases=[TypeAliasSummary(name="_Internal", value="int")],
+    )
+    output = render_module(module, no_private=True)
+    assert "_Internal" in output
+
+
+def test_render_multiple_type_aliases():
+    module = ModuleSummary(
+        path="example.py",
+        type_aliases=[
+            TypeAliasSummary(name="UserId", value="int"),
+            TypeAliasSummary(name="Coord", value="tuple[float, float]"),
+        ],
+    )
+    output = render_module(module)
+    assert "UserId = int" in output
+    assert "Coord = tuple[float, float]" in output
 
 
 # --- Tests for line wrapping (#14) ---
