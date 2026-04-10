@@ -9,6 +9,14 @@ class ConstantSummary:
 
 
 @dataclass
+class TypeAliasSummary:
+    name: str
+    value: str
+    type_params: list[str] = field(default_factory=list)
+    is_type_statement: bool = False
+
+
+@dataclass
 class FunctionSummary:
     name: str
     signature: str
@@ -31,3 +39,4 @@ class ModuleSummary:
     classes: list[ClassSummary] = field(default_factory=list)
     functions: list[FunctionSummary] = field(default_factory=list)
     constants: list[ConstantSummary] = field(default_factory=list)
+    type_aliases: list[TypeAliasSummary] = field(default_factory=list)

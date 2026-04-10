@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import re
 
-from .models import ClassSummary, ConstantSummary, FunctionSummary, ModuleSummary
+from .models import (
+    ClassSummary,
+    ConstantSummary,
+    FunctionSummary,
+    ModuleSummary,
+    TypeAliasSummary,
+)
 
 
 def render_module(
@@ -27,6 +33,12 @@ def render_module(
             const_lines.append(_render_constant(const))
         if const_lines:
             items.append("\n".join(const_lines))
+    if module.type_aliases:
+        alias_lines: list[str] = []
+        for alias in module.type_aliases:
+            alias_lines.append(_render_type_alias(alias))
+        if alias_lines:
+            items.append("\n".join(alias_lines))
     for cls in module.classes:
         if no_private and _is_private(cls.name) and cls.name not in keep_names:
             continue
@@ -71,6 +83,15 @@ def _render_constant(const: ConstantSummary) -> str:
     if const.value is not None:
         parts.append(f" = {const.value}")
     return "".join(parts)
+
+
+def _render_type_alias(alias: TypeAliasSummary) -> str:
+    if alias.is_type_statement:
+        if alias.type_params:
+            params = ", ".join(alias.type_params)
+            return f"type {alias.name}[{params}] = {alias.value}"
+        return f"type {alias.name} = {alias.value}"
+    return f"{alias.name} = {alias.value}"
 
 
 def _render_class(

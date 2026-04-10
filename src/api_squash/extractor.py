@@ -5,7 +5,13 @@ import re
 import warnings
 from pathlib import Path
 
-from .models import ClassSummary, ConstantSummary, FunctionSummary, ModuleSummary
+from .models import (
+    ClassSummary,
+    ConstantSummary,
+    FunctionSummary,
+    ModuleSummary,
+    TypeAliasSummary,
+)
 
 PRESERVED_DECORATORS = {"property", "classmethod", "staticmethod", "overload"}
 
@@ -21,22 +27,34 @@ def extract_file(path: Path) -> ModuleSummary:
     classes: list[ClassSummary] = []
     functions: list[FunctionSummary] = []
     constants: list[ConstantSummary] = []
+    type_aliases: list[TypeAliasSummary] = []
 
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.ClassDef):
             classes.append(_extract_class(node))
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             functions.append(_extract_function(node))
-        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+        elif isinstance(node, ast.AnnAssign):
+            alias = _extract_pep613_type_alias(node)
+            if alias is not None:
+                type_aliases.append(alias)
+            else:
+                const = _extract_constant(node)
+                if const is not None:
+                    constants.append(const)
+        elif isinstance(node, ast.Assign):
             const = _extract_constant(node)
             if const is not None:
                 constants.append(const)
+        elif isinstance(node, ast.TypeAlias):
+            type_aliases.append(_extract_pep695_type_alias(node))
 
     return ModuleSummary(
         path=path.as_posix(),
         classes=classes,
         functions=functions,
         constants=constants,
+        type_aliases=type_aliases,
     )
 
 
@@ -165,3 +183,33 @@ def _extract_constant(node: ast.Assign | ast.AnnAssign) -> ConstantSummary | Non
         return None
     value = ast.unparse(node.value)
     return ConstantSummary(name=name, value=value)
+
+
+_TYPE_ALIAS_ANNOTATIONS = {"TypeAlias"}
+
+
+def _extract_pep613_type_alias(node: ast.AnnAssign) -> TypeAliasSummary | None:
+    """Extract PEP 613 type aliases: ``Name: TypeAlias = value``."""
+    if not isinstance(node.target, ast.Name):
+        return None
+    ann = node.annotation
+    ann_name = ann.id if isinstance(ann, ast.Name) else None
+    if ann_name not in _TYPE_ALIAS_ANNOTATIONS:
+        return None
+    if node.value is None:
+        return None
+    return TypeAliasSummary(
+        name=node.target.id,
+        value=ast.unparse(node.value),
+    )
+
+
+def _extract_pep695_type_alias(node: ast.TypeAlias) -> TypeAliasSummary:
+    """Extract PEP 695 type statements: ``type Name[T] = value``."""
+    type_params = [ast.unparse(p) for p in node.type_params]
+    return TypeAliasSummary(
+        name=node.name.id,
+        value=ast.unparse(node.value),
+        type_params=type_params,
+        is_type_statement=True,
+    )

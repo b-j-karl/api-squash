@@ -401,3 +401,95 @@ def test_extract_mixed_case_skipped(tmp_path):
     result = extract_file(p)
 
     assert result.constants == []
+
+
+# --- Tests for type alias extraction (#21) ---
+
+
+def test_extract_pep613_type_alias(tmp_path):
+    """TypeAlias annotation (PEP 613) should be extracted."""
+    source = "from typing import TypeAlias\n\nPathLike: TypeAlias = str | Path\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    alias = result.type_aliases[0]
+    assert alias.name == "PathLike"
+    assert alias.value == "str | Path"
+
+
+def test_extract_pep695_type_statement(tmp_path):
+    """PEP 695 type statement (Python 3.12+) should be extracted."""
+    source = "type Vector = list[float]\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    alias = result.type_aliases[0]
+    assert alias.name == "Vector"
+    assert alias.value == "list[float]"
+
+
+def test_extract_pep695_type_with_params(tmp_path):
+    """PEP 695 type statement with type parameters."""
+    source = "type Matrix[T] = list[list[T]]\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    alias = result.type_aliases[0]
+    assert alias.name == "Matrix"
+    assert alias.value == "list[list[T]]"
+    assert alias.type_params == ["T"]
+
+
+def test_extract_pep613_typing_extensions(tmp_path):
+    """typing_extensions.TypeAlias should also be recognised."""
+    source = "from typing_extensions import TypeAlias\n\nUserId: TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.type_aliases[0].name == "UserId"
+    assert result.type_aliases[0].value == "int"
+
+
+def test_extract_type_alias_not_confused_with_constant(tmp_path):
+    """A TypeAlias should not also appear as a constant."""
+    source = "from typing import TypeAlias\n\nMY_TYPE: TypeAlias = int\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 1
+    assert result.constants == []
+
+
+def test_extract_multiple_type_aliases(tmp_path):
+    source = (
+        "from typing import TypeAlias\n\n"
+        "UserId: TypeAlias = int\n"
+        "type Coord = tuple[float, float]\n"
+    )
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert len(result.type_aliases) == 2
+    names = [a.name for a in result.type_aliases]
+    assert "UserId" in names
+    assert "Coord" in names
+
+
+def test_extract_plain_annotation_not_type_alias(tmp_path):
+    """A regular annotated assignment should NOT be treated as a type alias."""
+    source = "MY_VAR: int = 42\n"
+    p = tmp_path / "example.py"
+    p.write_text(source, encoding="utf-8")
+    result = extract_file(p)
+
+    assert result.type_aliases == []
