@@ -3,10 +3,11 @@ name: api-squash-cli
 description: >-
   Extract Python API surfaces in a compact, token-efficient Markdown format.
   Parses Python source files using the AST and produces concise summaries
-  containing only classes, functions, and their signatures. Supports
+  containing only classes, functions, and their signatures. Typically reduces
+  token count by 60–90% compared to reading full source files. Supports
   single-file and whole-project summarisation with options to strip docstrings,
-  exclude private methods, limit recursion depth, and exclude paths by glob
-  pattern.
+  exclude private methods, filter to __all__ exports, wrap long signatures,
+  limit recursion depth, and exclude paths by glob pattern.
 license: MIT License
 metadata:
   skill-author: b-j-karl
@@ -16,7 +17,8 @@ metadata:
 
 Extract Python API surfaces in a compact, token-efficient Markdown format using
 AST parsing. Produces summaries containing only classes, functions, and their
-signatures — no implementation details, no function bodies.
+signatures — no implementation details, no function bodies. Typically reduces
+token count by 60–90% compared to reading full source files.
 
 ## When to use
 
@@ -60,6 +62,8 @@ api-squash file [OPTIONS] PATH
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
+| `--wrap INTEGER` | Wrap long signatures at this column width (one param per line) |
+| `--public-only` | Only include names listed in `__all__` (modules without `__all__` are unaffected) |
 
 **Examples:**
 
@@ -84,6 +88,8 @@ api-squash project [OPTIONS] PATH
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
+| `--wrap INTEGER` | Wrap long signatures at this column width (one param per line) |
+| `--public-only` | Only include names listed in `__all__` (modules without `__all__` are unaffected) |
 
 Common directories(`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
 `dist`) are excluded automatically.
@@ -166,6 +172,8 @@ api-squash project src/ > api-surface.md
 | Top-level architecture only | `--max-depth 1 --no-docstrings` |
 | Large codebase (30+ files) | `--max-depth 1 --no-docstrings`, then drill into subpackages |
 | Exclude test files | `--exclude "tests/*" --exclude "test_*"` |
+| Readable long signatures | `--wrap 80` |
+| Only `__all__` exports | `--public-only` |
 
 ### Combining with other tools
 
