@@ -17,6 +17,7 @@ def render_module(
     no_docstrings: bool = False,
     no_private: bool = False,
     no_constants: bool = False,
+    public_only: bool = False,
     wrap: int | None = None,
 ) -> str:
     lines = [f"# {module.path}"]
@@ -25,10 +26,16 @@ def render_module(
     if no_private:
         keep_names = _collect_referenced_private_names(module)
 
+    all_names: set[str] | None = None
+    if public_only and module.dunder_all is not None:
+        all_names = set(module.dunder_all)
+
     items: list[str] = []
     if not no_constants:
         const_lines: list[str] = []
         for const in module.constants:
+            if all_names is not None and const.name not in all_names:
+                continue
             if no_private and _is_private(const.name):
                 continue
             const_lines.append(_render_constant(const))
@@ -37,10 +44,14 @@ def render_module(
     if module.type_aliases:
         alias_lines: list[str] = []
         for alias in module.type_aliases:
+            if all_names is not None and alias.name not in all_names:
+                continue
             alias_lines.append(_render_type_alias(alias))
         if alias_lines:
             items.append("\n".join(alias_lines))
     for cls in module.classes:
+        if all_names is not None and cls.name not in all_names:
+            continue
         if no_private and _is_private(cls.name) and cls.name not in keep_names:
             continue
         items.append(
@@ -49,6 +60,8 @@ def render_module(
             )
         )
     for func in module.functions:
+        if all_names is not None and func.name not in all_names:
+            continue
         if no_private and _is_private(func.name) and func.name not in keep_names:
             continue
         items.append(
@@ -68,6 +81,7 @@ def render_project(
     no_docstrings: bool = False,
     no_private: bool = False,
     no_constants: bool = False,
+    public_only: bool = False,
     wrap: int | None = None,
 ) -> str:
     rendered = [
@@ -76,6 +90,7 @@ def render_project(
             no_docstrings=no_docstrings,
             no_private=no_private,
             no_constants=no_constants,
+            public_only=public_only,
             wrap=wrap,
         )
         for module in modules
