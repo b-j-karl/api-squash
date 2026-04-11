@@ -37,14 +37,14 @@
   <rect x="140" y="68" width="34" height="14" rx="3" class="bar-max"/>
   <text x="180" y="79" class="val">9k</text>
 
-  <!-- requests — 47k / 14k / 2.3k -->
+  <!-- requests — 47k / 14k / 2.6k -->
   <text x="130" y="118" text-anchor="end" class="pkg">requests</text>
   <rect x="140" y="92" width="380" height="14" rx="3" class="bar-source"/>
   <text x="526" y="103" class="val">47k</text>
   <rect x="140" y="108" width="117" height="14" rx="3" class="bar-default"/>
   <text x="263" y="119" class="val">14k</text>
-  <rect x="140" y="124" width="19" height="14" rx="3" class="bar-max"/>
-  <text x="165" y="135" class="val">2.3k</text>
+  <rect x="140" y="124" width="21" height="14" rx="3" class="bar-max"/>
+  <text x="167" y="135" class="val">2.6k</text>
 
   <!-- flask — 84k / 38k / 6k -->
   <text x="130" y="174" text-anchor="end" class="pkg">flask</text>
@@ -55,14 +55,14 @@
   <rect x="140" y="180" width="27" height="14" rx="3" class="bar-max"/>
   <text x="173" y="191" class="val">6k</text>
 
-  <!-- django — 1.4M / 256k / 101k -->
+  <!-- django — 1.4M / 280k / 125k -->
   <text x="130" y="230" text-anchor="end" class="pkg">django</text>
   <rect x="140" y="204" width="380" height="14" rx="3" class="bar-source"/>
   <text x="526" y="215" class="val">1.4M</text>
-  <rect x="140" y="220" width="68" height="14" rx="3" class="bar-default"/>
-  <text x="214" y="231" class="val">256k</text>
-  <rect x="140" y="236" width="27" height="14" rx="3" class="bar-max"/>
-  <text x="173" y="247" class="val">101k</text>
+  <rect x="140" y="220" width="76" height="14" rx="3" class="bar-default"/>
+  <text x="222" y="231" class="val">280k</text>
+  <rect x="140" y="236" width="34" height="14" rx="3" class="bar-max"/>
+  <text x="180" y="247" class="val">125k</text>
 
   <!-- fastapi — 175k / 97k / 87k -->
   <text x="130" y="286" text-anchor="end" class="pkg">fastapi</text>
