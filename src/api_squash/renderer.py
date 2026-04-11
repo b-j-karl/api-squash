@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from .models import ClassSummary, FunctionSummary, ModuleSummary
+import re
+
+from .models import (
+    ClassSummary,
+    ConstantSummary,
+    FunctionSummary,
+    ModuleSummary,
+    TypeAliasSummary,
+)
 
 
 def render_module(
@@ -8,18 +16,57 @@ def render_module(
     *,
     no_docstrings: bool = False,
     no_private: bool = False,
+    no_constants: bool = False,
+    public_only: bool = False,
+    wrap: int | None = None,
 ) -> str:
     lines = [f"# {module.path}"]
 
+    keep_names: set[str] = set()
+    if no_private:
+        keep_names = _collect_referenced_private_names(module)
+
+    all_names: set[str] | None = None
+    if public_only and module.dunder_all is not None:
+        all_names = set(module.dunder_all)
+
     items: list[str] = []
+    if not no_constants:
+        const_lines: list[str] = []
+        for const in module.constants:
+            if all_names is not None and const.name not in all_names:
+                continue
+            if no_private and _is_private(const.name):
+                continue
+            const_lines.append(_render_constant(const))
+        if const_lines:
+            items.append("\n".join(const_lines))
+    if module.type_aliases:
+        alias_lines: list[str] = []
+        for alias in module.type_aliases:
+            if all_names is not None and alias.name not in all_names:
+                continue
+            alias_lines.append(_render_type_alias(alias))
+        if alias_lines:
+            items.append("\n".join(alias_lines))
     for cls in module.classes:
+        if all_names is not None and cls.name not in all_names:
+            continue
+        if no_private and _is_private(cls.name) and cls.name not in keep_names:
+            continue
         items.append(
-            _render_class(cls, no_docstrings=no_docstrings, no_private=no_private)
+            _render_class(
+                cls, no_docstrings=no_docstrings, no_private=no_private, wrap=wrap
+            )
         )
     for func in module.functions:
-        if no_private and _is_private(func.name):
+        if all_names is not None and func.name not in all_names:
             continue
-        items.append(_render_function(func, indent=0, no_docstrings=no_docstrings))
+        if no_private and _is_private(func.name) and func.name not in keep_names:
+            continue
+        items.append(
+            _render_function(func, indent=0, no_docstrings=no_docstrings, wrap=wrap)
+        )
 
     if items:
         lines.append("")
@@ -33,12 +80,40 @@ def render_project(
     *,
     no_docstrings: bool = False,
     no_private: bool = False,
+    no_constants: bool = False,
+    public_only: bool = False,
+    wrap: int | None = None,
 ) -> str:
     rendered = [
-        render_module(module, no_docstrings=no_docstrings, no_private=no_private)
+        render_module(
+            module,
+            no_docstrings=no_docstrings,
+            no_private=no_private,
+            no_constants=no_constants,
+            public_only=public_only,
+            wrap=wrap,
+        )
         for module in modules
     ]
     return "\n---\n\n".join(rendered)
+
+
+def _render_constant(const: ConstantSummary) -> str:
+    parts = [const.name]
+    if const.type_annotation:
+        parts.append(f": {const.type_annotation}")
+    if const.value is not None:
+        parts.append(f" = {const.value}")
+    return "".join(parts)
+
+
+def _render_type_alias(alias: TypeAliasSummary) -> str:
+    if alias.is_type_statement:
+        if alias.type_params:
+            params = ", ".join(alias.type_params)
+            return f"type {alias.name}[{params}] = {alias.value}"
+        return f"type {alias.name} = {alias.value}"
+    return f"{alias.name} = {alias.value}"
 
 
 def _render_class(
@@ -46,6 +121,7 @@ def _render_class(
     *,
     no_docstrings: bool = False,
     no_private: bool = False,
+    wrap: int | None = None,
 ) -> str:
     parts: list[str] = []
 
@@ -60,7 +136,9 @@ def _render_class(
     for method in cls.methods:
         if no_private and _is_private(method.name) and method.name != "__init__":
             continue
-        parts.append(_render_function(method, indent=2, no_docstrings=no_docstrings))
+        parts.append(
+            _render_function(method, indent=2, no_docstrings=no_docstrings, wrap=wrap)
+        )
 
     return "\n".join(parts)
 
@@ -70,17 +148,110 @@ def _render_function(
     *,
     indent: int = 0,
     no_docstrings: bool = False,
+    wrap: int | None = None,
 ) -> str:
     prefix = " " * indent
     parts: list[str] = []
 
+    for dec in func.decorators:
+        parts.append(f"{prefix}@{dec}")
+
     keyword = "async def" if func.is_async else "def"
-    parts.append(f"{prefix}{keyword} {func.name}{func.signature}")
+    single_line = f"{prefix}{keyword} {func.name}{func.signature}"
+
+    if wrap is not None and len(single_line) > wrap:
+        parts.append(_wrap_signature(func, indent=indent, keyword=keyword))
+    else:
+        parts.append(single_line)
 
     if func.docstring and not no_docstrings:
         parts.append(_format_docstring(func.docstring, indent=indent + 2))
 
     return "\n".join(parts)
+
+
+def _wrap_signature(func: FunctionSummary, *, indent: int, keyword: str) -> str:
+    """Render a function signature with one parameter per line."""
+    prefix = " " * indent
+    param_indent = " " * (indent + 4)
+
+    sig = func.signature
+    # Guard against malformed signatures without parentheses
+    if "(" not in sig:
+        return f"{prefix}{keyword} {func.name}{sig}"
+
+    # Split "(params) -> return" into params and return type
+    paren_start = sig.index("(")
+    # Find the matching closing paren
+    depth = 0
+    paren_end = -1
+    for i in range(paren_start, len(sig)):
+        if sig[i] == "(":
+            depth += 1
+        elif sig[i] == ")":
+            depth -= 1
+            if depth == 0:
+                paren_end = i
+                break
+
+    if paren_end == -1:
+        return f"{prefix}{keyword} {func.name}{sig}"
+
+    params_str = sig[paren_start + 1 : paren_end]
+    return_annotation = sig[paren_end + 1 :]
+
+    params = _split_params(params_str)
+
+    lines = [f"{prefix}{keyword} {func.name}("]
+    for param in params:
+        lines.append(f"{param_indent}{param.strip()},")
+    lines.append(f"{prefix}){return_annotation}")
+
+    return "\n".join(lines)
+
+
+def _split_params(params_str: str) -> list[str]:
+    """Split parameter string at top-level commas, respecting bracket nesting and quotes."""
+    params: list[str] = []
+    depth = 0
+    current: list[str] = []
+    in_quote: str | None = None
+
+    escaped = False
+    for char in params_str:
+        if escaped:
+            current.append(char)
+            escaped = False
+            continue
+        if char == "\\":
+            current.append(char)
+            escaped = True
+            continue
+        if in_quote is not None:
+            current.append(char)
+            if char == in_quote:
+                in_quote = None
+        elif char in ("'", '"'):
+            in_quote = char
+            current.append(char)
+        elif char in "([{":
+            depth += 1
+            current.append(char)
+        elif char in ")]}":
+            depth -= 1
+            current.append(char)
+        elif char == "," and depth == 0:
+            params.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+
+    if current:
+        remaining = "".join(current).strip()
+        if remaining:
+            params.append("".join(current))
+
+    return params
 
 
 def _format_docstring(docstring: str, *, indent: int) -> str:
@@ -102,3 +273,42 @@ def _format_docstring(docstring: str, *, indent: int) -> str:
 
 def _is_private(name: str) -> bool:
     return name.startswith("_")
+
+
+def _collect_referenced_private_names(module: ModuleSummary) -> set[str]:
+    """Find private names referenced in public signatures or class bases."""
+    private_names: set[str] = set()
+    for cls in module.classes:
+        if _is_private(cls.name):
+            private_names.add(cls.name)
+    for func in module.functions:
+        if _is_private(func.name):
+            private_names.add(func.name)
+
+    if not private_names:
+        return set()
+
+    pattern = re.compile(
+        r"\b(" + "|".join(re.escape(n) for n in private_names) + r")\b"
+    )
+
+    keep: set[str] = set()
+
+    for cls in module.classes:
+        is_public_cls = not _is_private(cls.name)
+        if is_public_cls:
+            for base in cls.bases:
+                keep.update(pattern.findall(base))
+        for method in cls.methods:
+            # Scan public methods and __init__ (which is always kept)
+            is_visible = is_public_cls and (
+                not _is_private(method.name) or method.name == "__init__"
+            )
+            if is_visible:
+                keep.update(pattern.findall(method.signature))
+
+    for func in module.functions:
+        if not _is_private(func.name):
+            keep.update(pattern.findall(func.signature))
+
+    return keep & private_names

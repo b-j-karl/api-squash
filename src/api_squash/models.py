@@ -2,11 +2,27 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class ConstantSummary:
+    name: str
+    type_annotation: str | None = None
+    value: str | None = None
+
+
+@dataclass
+class TypeAliasSummary:
+    name: str
+    value: str
+    type_params: list[str] = field(default_factory=list)
+    is_type_statement: bool = False
+
+
+@dataclass
 class FunctionSummary:
     name: str
     signature: str
     docstring: str | None = None
     is_async: bool = False
+    decorators: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -22,3 +38,6 @@ class ModuleSummary:
     path: str
     classes: list[ClassSummary] = field(default_factory=list)
     functions: list[FunctionSummary] = field(default_factory=list)
+    constants: list[ConstantSummary] = field(default_factory=list)
+    type_aliases: list[TypeAliasSummary] = field(default_factory=list)
+    dunder_all: list[str] | None = None
