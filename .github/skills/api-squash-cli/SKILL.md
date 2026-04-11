@@ -20,7 +20,8 @@ metadata:
 
 Extract Python API surfaces in a compact, token-efficient Markdown format using
 AST parsing. Produces summaries containing only classes, functions, and their
-signatures — no implementation details, no function bodies.
+signatures — no implementation details, no function bodies. Typically reduces
+token count by 60–90% compared to reading full source files.
 
 ## Use for
 
@@ -49,6 +50,10 @@ If `api-squash` is not installed, install it before proceeding. In development
 repos that bundle it, use `uv run api-squash` instead. To run without
 installation, use `uvx api-squash`.
 
+> **Note:** `--wrap` and `--public-only` are not in the v0.1.0 PyPI release.
+> If `api-squash --help` does not show these flags, use `uv run api-squash` from
+> a cloned repo, or wait for the next release.
+
 ---
 
 ## Commands
@@ -64,6 +69,8 @@ api-squash file [OPTIONS] PATH
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
+| `--wrap INTEGER` | Wrap long signatures at this column width (one param per line) |
+| `--public-only` | Only include names listed in `__all__` (modules without `__all__` are unaffected) |
 
 **Examples:**
 
@@ -73,6 +80,12 @@ api-squash file src/auth/models.py
 
 # Minimal summary — signatures only
 api-squash file --no-docstrings --no-private src/auth/models.py
+
+# Wrap long signatures at 80 characters for readability
+api-squash file --wrap 80 src/auth/models.py
+
+# Only names declared in __all__
+api-squash file --public-only src/auth/models.py
 ```
 
 ### `api-squash project` — whole-project summary
@@ -88,8 +101,10 @@ api-squash project [OPTIONS] PATH
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
+| `--wrap INTEGER` | Wrap long signatures at this column width (one param per line) |
+| `--public-only` | Only include names listed in `__all__` (modules without `__all__` are unaffected) |
 
-Common directories (`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
+Common directories(`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
 `dist`) are excluded automatically.
 
 **Examples:**
@@ -103,6 +118,9 @@ api-squash project --max-depth 1 --exclude "tests/*" src/
 
 # Compact summary for token-constrained contexts
 api-squash project --no-docstrings --no-private src/
+
+# Only __all__ exports across the project
+api-squash project --public-only src/
 ```
 
 ---
@@ -170,6 +188,8 @@ api-squash project src/ > api-surface.md
 | Top-level architecture only | `--max-depth 1 --no-docstrings` |
 | Large codebase (30+ files) | `--max-depth 1 --no-docstrings`, then drill into subpackages |
 | Exclude test files | `--exclude "tests/*" --exclude "test_*"` |
+| Readable long signatures | `--wrap 80` |
+| Only `__all__` exports | `--public-only` |
 
 ### Combining with other tools
 
