@@ -31,6 +31,8 @@ reason about codebase structure without reading every source file.
 - Orienting yourself in an unfamiliar Python codebase
 - Answering "what does this project expose?" or "how is this structured?"
 - Preparing context before a code review or refactor
+- Reducing token costs — api-squash typically cuts output by 60–90% compared
+  to reading full source files
 
 ## Do not use for
 
@@ -53,6 +55,7 @@ Before running anything, decide what you need:
 | Get a high-level overview only | `api-squash project --max-depth 1 --no-docstrings <path>` |
 | Minimise tokens (large codebase) | `api-squash project --no-docstrings --no-private <path>` |
 | Focus on public API only | `api-squash project --no-private <path>` |
+| Only strict `__all__` exports | `api-squash project --public-only <path>` |
 
 ### Step 2 — Run api-squash and read the output
 
@@ -93,6 +96,18 @@ structural knowledge you've gained.
   API (planning, architecture, finding the right hook point)
 - **Strip private** (`--no-private`) when you only care about the public
   interface (integration work, SDK consumers)
+
+### `--public-only` vs `--no-private`
+
+Both flags reduce output size but filter differently:
+- **`--no-private`** removes `_`-prefixed names but keeps `__init__` and any
+  private items referenced by public signatures.
+- **`--public-only`** filters to **only** names listed in `__all__`. Modules
+  without `__all__` are unaffected.
+
+Use `--no-private` to hide implementation internals while keeping the full
+exported interface. Use `--public-only` when you need only what the module
+explicitly declares as its public API.
 
 ### When to limit depth
 
