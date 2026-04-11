@@ -68,6 +68,21 @@ uv run ruff check src/ tests/
 uv run ruff format src/ tests/
 ```
 
+## Skill Files
+
+The `docs/skills/` directory is the source of truth for all AI agent skill
+files. The deployed copies in `.claude/skills/` (Claude Code) and
+`.github/skills/` (GitHub Copilot CLI) are generated from those sources.
+
+After editing any skill under `docs/skills/`, propagate the changes by running:
+
+```bash
+uv run python scripts/sync_skills.py
+```
+
+The test suite includes `test_skill_sync.py`, which fails if deployed copies
+are out of date.
+
 ## Code Conventions
 
 - **TDD** — write failing tests first, then implement.
