@@ -50,6 +50,10 @@ If `api-squash` is not installed, install it before proceeding. In development
 repos that bundle it, use `uv run api-squash` instead. To run without
 installation, use `uvx api-squash`.
 
+> **Note:** `--wrap` and `--public-only` are not in the v0.1.0 PyPI release.
+> If `api-squash --help` does not show these flags, use `uv run api-squash` from
+> a cloned repo, or wait for the next release.
+
 ---
 
 ## Commands
@@ -76,6 +80,12 @@ api-squash file src/auth/models.py
 
 # Minimal summary — signatures only
 api-squash file --no-docstrings --no-private src/auth/models.py
+
+# Wrap long signatures at 80 characters for readability
+api-squash file --wrap 80 src/auth/models.py
+
+# Only names declared in __all__
+api-squash file --public-only src/auth/models.py
 ```
 
 ### `api-squash project` — whole-project summary
@@ -108,6 +118,9 @@ api-squash project --max-depth 1 --exclude "tests/*" src/
 
 # Compact summary for token-constrained contexts
 api-squash project --no-docstrings --no-private src/
+
+# Only __all__ exports across the project
+api-squash project --public-only src/
 ```
 
 ---
