@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-11
+
 ### Added
 
 - Module-level `UPPER_CASE` constants included in output by default; opt out
@@ -19,8 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   line (#14)
 - Type alias support — PEP 613 (`TypeAlias`) and PEP 695 (`type X = ...`)
   (#21)
+- `--public-only` flag to filter output to names listed in `__all__` (#19)
+- `--dry-run` flag to estimate output size without producing full output (#23)
+- `--version` flag to print the installed package version (#41)
 - Benchmark table comparing output across large Python packages (#26)
 - Pre-commit hooks for Ruff lint and format
+- Agent skills updated with `--dry-run`, `--public-only`, `--wrap`, token
+  compression guidance, and `--public-only` vs `--no-private` decision guide
+  (#56)
 
 ### Fixed
 
@@ -50,5 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CI/CD pipeline with GitHub Actions (lint, test, publish to PyPI)
 - Codecov integration for test coverage reporting
 
-[Unreleased]: https://github.com/b-j-karl/api-squash/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/b-j-karl/api-squash/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/b-j-karl/api-squash/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/b-j-karl/api-squash/releases/tag/v0.1.0

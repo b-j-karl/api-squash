@@ -1,6 +1,6 @@
 [project]
 name = "api-squash"
-version = "0.1.0"
+version = "0.2.0"
 description = "Extract Python API surfaces in a compact, token-efficient format"
 license = "MIT"
 requires-python = ">=3.10"
