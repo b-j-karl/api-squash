@@ -6,7 +6,7 @@ description: >-
   class hierarchies, function signatures, and module layout — so you can
   reason about a Python project without reading every source file. Covers
   scope selection (file vs project), flag selection (docstrings, private
-  methods, depth), and when to drill deeper.
+  methods, public-only, depth), and when to drill deeper.
 license: MIT License
 metadata:
   skill-author: b-j-karl
@@ -49,12 +49,15 @@ Before running anything, decide what you need:
 | Survey a whole project or package | `api-squash project <path>` |
 | Get a high-level overview only | `api-squash project --max-depth 1 --no-docstrings <path>` |
 | Minimise tokens (large codebase) | `api-squash project --no-docstrings --no-private <path>` |
-| Focus on public API only | `api-squash project --no-private <path>` |
+| Focus on strict public API (`__all__`) | `api-squash project --public-only <path>` |
+| Estimate output size before running | `api-squash project --dry-run <path>` |
 
 ### Step 2 — Run api-squash and read the output
 
 Run the appropriate command and read the output directly. The output is
 Markdown that lists every class and function signature in the target.
+It is typically **60–90% smaller** than the original source — always prefer
+it over reading individual files for structural orientation.
 
 If `api-squash` is not on PATH, use `uvx api-squash` instead.
 
@@ -90,6 +93,21 @@ structural knowledge you've gained.
   API (planning, architecture, finding the right hook point)
 - **Strip private** (`--no-private`) when you only care about the public
   interface (integration work, SDK consumers)
+
+### `--public-only` vs `--no-private`
+
+These flags overlap conceptually but do different things:
+
+- **`--no-private`** removes names whose identifiers start with `_`, except
+  `__init__` and items referenced by public signatures. Good for hiding
+  internal implementation details while keeping everything the module uses
+  publicly.
+- **`--public-only`** filters to only names explicitly listed in `__all__`.
+  Good for strict public API surfaces where the author has defined the
+  intended export list. Modules without `__all__` are unaffected.
+
+Use `--no-private` to hide internals. Use `--public-only` to enforce the
+author's intended public API.
 
 ### When to limit depth
 

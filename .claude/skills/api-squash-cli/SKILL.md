@@ -5,7 +5,8 @@ description: >-
   Parses Python source files using the AST and produces concise summaries
   containing only classes, functions, and their signatures. Supports
   single-file and whole-project summarisation with options to strip docstrings,
-  exclude private methods, limit recursion depth, and exclude paths by glob
+  exclude private methods, filter to __all__ exports, wrap long signatures,
+  limit recursion depth, estimate output size, and exclude paths by glob
   pattern.
 license: MIT License
 metadata:
@@ -17,6 +18,10 @@ metadata:
 Extract Python API surfaces in a compact, token-efficient Markdown format using
 AST parsing. Produces summaries containing only classes, functions, and their
 signatures — no implementation details, no function bodies.
+
+Typical output is **60–90% smaller** than the original source, making it the
+preferred way to load structural context before code generation, test writing,
+or refactoring.
 
 ## When to use
 
@@ -60,6 +65,9 @@ api-squash file [OPTIONS] PATH
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
+| `--wrap INTEGER` | Wrap long signatures at this column width (one param per line) |
+| `--public-only` | Only include names listed in `__all__` (modules without `__all__` are unaffected) |
+| `--dry-run` | Show estimated output size without producing the full output |
 
 **Examples:**
 
@@ -69,6 +77,9 @@ api-squash file src/auth/models.py
 
 # Minimal summary — signatures only
 api-squash file --no-docstrings --no-private src/auth/models.py
+
+# Check how large the output will be before running
+api-squash file --dry-run src/auth/models.py
 ```
 
 ### `api-squash project` — whole-project summary
@@ -84,6 +95,9 @@ api-squash project [OPTIONS] PATH
 | `--no-docstrings` | Strip all docstrings from the output |
 | `--no-private` | Skip private classes/methods (except `__init__`); keeps items referenced by public signatures |
 | `--no-constants` | Exclude module-level UPPER_CASE constants from output |
+| `--wrap INTEGER` | Wrap long signatures at this column width (one param per line) |
+| `--public-only` | Only include names listed in `__all__` (modules without `__all__` are unaffected) |
+| `--dry-run` | Show estimated output size without producing the full output |
 
 Common directories (`__pycache__`, `.venv`, `.git`, `node_modules`, `build`,
 `dist`) are excluded automatically.
@@ -99,6 +113,9 @@ api-squash project --max-depth 1 --exclude "tests/*" src/
 
 # Compact summary for token-constrained contexts
 api-squash project --no-docstrings --no-private src/
+
+# Estimate output size before running on a large project
+api-squash project --dry-run src/
 ```
 
 ---
@@ -166,6 +183,9 @@ api-squash project src/ > api-surface.md
 | Top-level architecture only | `--max-depth 1 --no-docstrings` |
 | Large codebase (30+ files) | `--max-depth 1 --no-docstrings`, then drill into subpackages |
 | Exclude test files | `--exclude "tests/*" --exclude "test_*"` |
+| Strict public API (`__all__` exports only) | `--public-only` |
+| Readable long signatures | `--wrap 80` |
+| Estimate output size before running | `--dry-run` |
 
 ### Combining with other tools
 
