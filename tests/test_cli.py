@@ -253,7 +253,7 @@ def test_file_dry_run(tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli, ["file", str(p), "--dry-run"])
     assert result.exit_code == 0
-    assert "Scanned 1 file:" in result.output
+    assert "Extracted 1 file:" in result.output
     assert "1 classes" in result.output
     assert "2 functions" in result.output
     assert "1 constants" in result.output
@@ -272,7 +272,7 @@ def test_file_dry_run_no_rendered_output(tmp_path):
     assert result.exit_code == 0
     assert "def greet" not in result.output
     assert "Say hello." not in result.output
-    assert "Scanned 1 file:" in result.output
+    assert "Extracted 1 file:" in result.output
 
 
 def test_project_dry_run(tmp_path):
@@ -288,7 +288,7 @@ def test_project_dry_run(tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli, ["project", str(tmp_path), "--dry-run"])
     assert result.exit_code == 0
-    assert "Scanned 2 files:" in result.output
+    assert "Extracted 2 files:" in result.output
     assert "1 classes" in result.output
     assert "1 functions" in result.output
     assert "current flags" in result.output
@@ -311,8 +311,8 @@ def test_file_dry_run_combined_with_no_docstrings(tmp_path):
     assert result_default.exit_code == 0
     assert result_no_docs.exit_code == 0
     # Both should show summary, not rendered output
-    assert "Scanned 1 file:" in result_default.output
-    assert "Scanned 1 file:" in result_no_docs.output
+    assert "Extracted 1 file:" in result_default.output
+    assert "Extracted 1 file:" in result_no_docs.output
 
 
 def test_project_dry_run_empty(tmp_path):

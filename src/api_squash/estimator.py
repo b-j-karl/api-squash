@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .models import ModuleSummary
-from .renderer import render_module, render_project
+from .renderer import render_module
+
+
+SEPARATOR = "\n---\n\n"
 
 
 @dataclass
@@ -15,6 +18,21 @@ class EstimateResult:
     type_aliases: int
     size_bytes: int
     minimal_size_bytes: int
+
+
+def _sum_rendered_sizes(
+    modules: list[ModuleSummary],
+    **render_kwargs: object,
+) -> int:
+    """Sum UTF-8 byte lengths of individually rendered modules plus separators."""
+    total = 0
+    sep_bytes = len(SEPARATOR.encode("utf-8"))
+    for i, module in enumerate(modules):
+        rendered = render_module(module, **render_kwargs)
+        total += len(rendered.encode("utf-8"))
+        if i < len(modules) - 1:
+            total += sep_bytes
+    return total
 
 
 def estimate(
@@ -44,33 +62,28 @@ def estimate(
             minimal_size_bytes=0,
         )
 
-    render_kwargs = dict(
+    current_kwargs = dict(
         no_docstrings=no_docstrings,
         no_private=no_private,
         no_constants=no_constants,
         public_only=public_only,
         wrap=wrap,
     )
+    minimal_kwargs = dict(
+        no_docstrings=True,
+        no_private=True,
+        no_constants=True,
+        public_only=public_only,
+        wrap=wrap,
+    )
 
-    if files == 1:
-        current_output = render_module(modules[0], **render_kwargs)
-        minimal_output = render_module(
-            modules[0],
-            no_docstrings=True,
-            no_private=True,
-            no_constants=True,
-            public_only=public_only,
-            wrap=wrap,
-        )
+    if files > 1:
+        size_bytes = _sum_rendered_sizes(modules, **current_kwargs)
+        minimal_size_bytes = _sum_rendered_sizes(modules, **minimal_kwargs)
     else:
-        current_output = render_project(modules, **render_kwargs)
-        minimal_output = render_project(
-            modules,
-            no_docstrings=True,
-            no_private=True,
-            no_constants=True,
-            public_only=public_only,
-            wrap=wrap,
+        size_bytes = len(render_module(modules[0], **current_kwargs).encode("utf-8"))
+        minimal_size_bytes = len(
+            render_module(modules[0], **minimal_kwargs).encode("utf-8")
         )
 
     return EstimateResult(
@@ -79,8 +92,8 @@ def estimate(
         functions=functions,
         constants=constants,
         type_aliases=type_aliases,
-        size_bytes=len(current_output.encode("utf-8")),
-        minimal_size_bytes=len(minimal_output.encode("utf-8")),
+        size_bytes=size_bytes,
+        minimal_size_bytes=minimal_size_bytes,
     )
 
 
@@ -91,11 +104,11 @@ def format_estimate(result: EstimateResult) -> str:
     minimal_kb = result.minimal_size_bytes / 1024
 
     return (
-        f"Scanned {result.files} {file_word}: "
+        f"Extracted {result.files} {file_word}: "
         f"{result.classes} classes, "
         f"{result.functions} functions, "
         f"{result.constants} constants, "
         f"{result.type_aliases} type aliases\n"
-        f"Estimated output: ~{current_kb:.1f} KB (current flags), "
-        f"~{minimal_kb:.1f} KB (minimal)\n"
+        f"Estimated output: {current_kb:.1f} KB (current flags), "
+        f"{minimal_kb:.1f} KB (minimal)\n"
     )

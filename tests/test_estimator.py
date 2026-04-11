@@ -205,7 +205,7 @@ def test_format_estimate_single_file():
         minimal_size_bytes=820,
     )
     text = format_estimate(result)
-    assert "Scanned 1 file:" in text
+    assert "Extracted 1 file:" in text
     assert "3 classes" in text
     assert "12 functions" in text
     assert "2 constants" in text
@@ -227,7 +227,7 @@ def test_format_estimate_multiple_files():
         minimal_size_bytes=4300,
     )
     text = format_estimate(result)
-    assert "Scanned 42 files:" in text
+    assert "Extracted 42 files:" in text
     assert "15 classes" in text
 
 
@@ -242,7 +242,7 @@ def test_format_estimate_zero_files():
         minimal_size_bytes=0,
     )
     text = format_estimate(result)
-    assert "Scanned 0 files:" in text
+    assert "Extracted 0 files:" in text
     assert "0.0 KB" in text
 
 
